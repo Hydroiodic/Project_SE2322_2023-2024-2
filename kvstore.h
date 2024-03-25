@@ -7,7 +7,7 @@ class KVStore : public KVStoreAPI
 	// You can add your implementation here
 private:
 public:
-	KVStore(const std::string &dir);
+	KVStore(const std::string &dir, const std::string &vlog);
 
 	~KVStore();
 

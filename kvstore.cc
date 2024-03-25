@@ -1,7 +1,7 @@
 #include "kvstore.h"
 #include <string>
 
-KVStore::KVStore(const std::string &dir) : KVStoreAPI(dir)
+KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(dir, vlog)
 {
 }
 
