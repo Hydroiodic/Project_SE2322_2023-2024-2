@@ -26,7 +26,7 @@ namespace vlog {
         value_type readFromFile(uint64_t offset);
 
     public:
-        vLog();
+        explicit vLog(const std::string& name);
         ~vLog();
 
         uint64_t append(const key_type& key, const value_type& val);

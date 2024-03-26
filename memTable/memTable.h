@@ -21,7 +21,7 @@ namespace memtable {
         uint64_t cur_timestamp = 0;   // TODO
 
     public:
-        memTable();
+        explicit memTable();
         ~memTable();
 
         bool insert(const key_type& key, const value_type& value, uint32_t offset);

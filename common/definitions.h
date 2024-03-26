@@ -36,7 +36,11 @@ namespace def {
     // charactor representing start
     const unsigned char start_sign = 0xff;
 
+    // class vLog has a fixed-size part and a dynamic-size part
     const size_t v_log_fixed_size = sizeof(vLogEntry) - sizeof(value_type);
+
+    // extension name of SSTable
+    const std::string sstable_extension_name = ".sst";
 
     // max number of keys stored in the memory
     const size_t max_file_size = 16 * 1024;

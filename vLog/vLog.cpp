@@ -2,12 +2,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <string>
 #include <vector>
 #include <ios>
 
 namespace vlog {
 
-    vLog::vLog() {
+    vLog::vLog(const std::string& name) : file_name(name) {
         file_stream.open(file_name, std::ios::in | std::ios::app | std::ios::binary);
         initialize();
     }
