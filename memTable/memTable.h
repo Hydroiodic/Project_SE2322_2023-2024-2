@@ -2,6 +2,7 @@
 
 #include "../skipList/skipList.h"
 #include "../common/definitions.h"
+#include "../vLog/vLog.h"
 #include <cstddef>
 #include <cstdint>
 #include <utility>
@@ -23,9 +24,9 @@ namespace memtable {
         memTable();
         ~memTable();
 
-        bool insert(const key_type& key, const value_type& value);
+        bool insert(const key_type& key, const value_type& value, uint32_t offset);
         bool remove(const key_type& key);
-        mem_table_content getContent() const;
+        mem_table_content getContent(vlog::vLog& v_log) const;
     };
 }
 

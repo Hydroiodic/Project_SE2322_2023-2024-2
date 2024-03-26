@@ -14,7 +14,7 @@ namespace memtable {
         /* here a lot of work TODO */
     }
 
-    bool memTable::insert(const key_type &key, const value_type &value) {
+    bool memTable::insert(const key_type &key, const value_type &value, uint32_t offset) {
         // insert the value
         data.put(key, value);
 
@@ -30,7 +30,7 @@ namespace memtable {
         return data.size() + 1 <= def::max_key_number;
     }
 
-    mem_table_content memTable::getContent() const {
+    mem_table_content memTable::getContent(vlog::vLog& v_log) const {
         // here we new an array of char, please remember to delete it
         char* content = new char[def::max_file_size];
         size_t cur_position = 0;
@@ -58,7 +58,7 @@ namespace memtable {
             value_type val = it.value();
             def::sstableData cur_data {
                 it.key(),
-                0,      // TODO
+                v_log.append(key, val),      // TODO
                 static_cast<uint32_t>(val.length()),
             };
             memcpy(content + cur_position, &cur_data, def::sstable_data_size);

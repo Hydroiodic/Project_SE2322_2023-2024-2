@@ -23,6 +23,8 @@ namespace def {
     };
 
     struct vLogEntry {
+        unsigned char start;
+        uint16_t cycSum;
         key_type key;
         uint32_t value_length;
         value_type value;
@@ -30,6 +32,11 @@ namespace def {
 
     // tag representing deleted element
     const value_type delete_tag = "~DELETED~";
+
+    // charactor representing start
+    const unsigned char start_sign = 0xff;
+
+    const size_t v_log_fixed_size = sizeof(vLogEntry) - sizeof(value_type);
 
     // max number of keys stored in the memory
     const size_t max_file_size = 16 * 1024;

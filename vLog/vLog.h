@@ -3,8 +3,13 @@
 #include <cstdint>
 #include <fstream>
 #include <string>
+#include "../common/definitions.h"
+#include "../utils.h"
 
 namespace vlog {
+
+    using key_type = def::key_type;
+    using value_type = def::value_type;
 
     class vLog
     {
@@ -16,10 +21,16 @@ namespace vlog {
         std::uint64_t tail, head;
         void initialize();
 
+        // use this function to deal with different types of key-value pair
+        uint64_t writeIntoFile(def::vLogEntry& entry);
+        value_type readFromFile(uint64_t offset);
+
     public:
         vLog();
         ~vLog();
 
+        uint64_t append(const key_type& key, const value_type& val);
+        value_type get(uint64_t offset);
     };
 
 }
