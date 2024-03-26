@@ -1,14 +1,26 @@
-#include "vLog.h"
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
-#include <string>
+#include <filesystem>
 #include <vector>
 #include <ios>
+#include "vLog.h"
+#include "../common/exceptions.h"
 
 namespace vlog {
 
     vLog::vLog(const std::string& name) : file_name(name) {
+        // use a safer way to manage file path
+        std::filesystem::path path(name);
+        if (!path.has_filename()) {
+            throw exception::vlog_path_error();
+        }
+
+        // create directory first
+        if (utils::mkdir(path.parent_path().string()) != 0) {
+            throw exception::create_directory_fail();
+        }
+
+        // open file and initialize vlog
         file_stream.open(file_name, std::ios::in | std::ios::app | std::ios::binary);
         initialize();
     }

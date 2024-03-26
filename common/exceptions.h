@@ -8,4 +8,6 @@ namespace exception {
 
     class create_directory_fail : std::exception {};
 
+    class vlog_path_error : std::exception {};
+
 }

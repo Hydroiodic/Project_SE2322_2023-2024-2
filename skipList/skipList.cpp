@@ -114,7 +114,7 @@ namespace skiplist {
         baseDataNode* find_base_node = find(key, head->size(), head).first;
 
         // if find the right node
-        if (*(find_base_node->getLayer(0)->key) == key) {
+        if (*(find_base_node->getLayer(1)->key) == key) {
             return find_base_node->getValues();
         }
 
@@ -128,8 +128,11 @@ namespace skiplist {
             head->nextNode() = next_node->nextNode();
             delete next_node;
         }
-        head->nextNode() = nullptr;
+        delete head;
         key_number = 0;
+
+        head = new baseDataNode();
+        head->addNewSearchNode();
     }
 
     int skiplist_type::query_distance(const key_type& key) const {
@@ -168,7 +171,7 @@ namespace skiplist {
     }
 
 	const key_type& skiplist_type::const_iterator::key() const {
-        return *(this->pointer->getLayer(0)->key);
+        return *(this->pointer->getLayer(1)->key);
     }
 
     skiplist_type::const_iterator skiplist_type::cbegin() const {

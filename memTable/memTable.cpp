@@ -14,7 +14,7 @@ namespace memtable {
         /* here a lot of work TODO */
     }
 
-    bool memTable::insert(const key_type &key, const value_type &value, uint32_t offset) {
+    bool memTable::insert(const key_type &key, const value_type &value) {
         // insert the value
         data.put(key, value);
 
@@ -28,6 +28,10 @@ namespace memtable {
 
         // whether the size of the table allows more insertion
         return data.size() + 1 <= def::max_key_number;
+    }
+
+    void memTable::clear() {
+        data.clear();
     }
 
     mem_table_content memTable::getContent(vlog::vLog& v_log) const {

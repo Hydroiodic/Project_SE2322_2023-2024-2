@@ -1,25 +1,43 @@
 #pragma once
 
+#include <string>
 #include "kvstore_api.h"
+#include "./common/definitions.h"
+#include "./memTable/memTable.h"
+#include "./ssTable/ssTable.h"
+#include "./vLog/vLog.h"
+
+using memtable::memTable;
+using memtable::mem_table_content;
+using sstable::SSTable;
+using vlog::vLog;
+using def::key_type;
+using def::value_type;
 
 class KVStore : public KVStoreAPI
 {
-	// You can add your implementation here
 private:
+	std::string directory;
+
+	vLog v_log;
+	memTable mem_table;
+
+	void writeMemTableIntoFile();
+
 public:
 	KVStore(const std::string &dir, const std::string &vlog);
 
 	~KVStore();
 
-	void put(uint64_t key, const std::string &s) override;
+	void put(key_type key, const value_type& value) override;
 
-	std::string get(uint64_t key) override;
+	std::string get(key_type key) override;
 
-	bool del(uint64_t key) override;
+	bool del(key_type key) override;
 
 	void reset() override;
 
-	void scan(uint64_t key1, uint64_t key2, std::list<std::pair<uint64_t, std::string>> &list) override;
+	void scan(key_type key1, key_type key2, std::list<std::pair<key_type, value_type>>& list) override;
 
-	void gc(uint64_t chunk_size) override;
+	void gc(key_type chunk_size) override;
 };

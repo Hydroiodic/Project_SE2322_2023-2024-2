@@ -16,10 +16,11 @@ namespace sstable {
         std::string file_name;
         std::fstream file_stream;
 
-        uint64_t timestamp;
+        uint64_t timestamp = 0;
+        size_t layer_number = 0;
 
     public:
-        explicit SSTable(const std::string& dir_name, const std::string& f_name, bool create);
+        explicit SSTable(const std::string& dir_name, uint64_t ts, size_t layer, bool create);
         ~SSTable();
 
         void initialize();

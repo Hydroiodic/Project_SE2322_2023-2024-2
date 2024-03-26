@@ -42,6 +42,9 @@ namespace def {
     // extension name of SSTable
     const std::string sstable_extension_name = ".sst";
 
+    // base name of directories storing sstable
+    const std::string sstable_base_directory_name = "level-";
+
     // max number of keys stored in the memory
     const size_t max_file_size = 16 * 1024;
     const size_t sstable_header_size = sizeof(sstableHeader);
