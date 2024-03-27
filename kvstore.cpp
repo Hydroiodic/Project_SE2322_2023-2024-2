@@ -1,5 +1,13 @@
+#include <algorithm>
+#include <cstddef>
+#include <filesystem>
+#include <functional>
+#include <optional>
 #include <string>
+#include <vector>
 #include "kvstore.h"
+#include "common/definitions.h"
+#include "utils.h"
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog)
 	: KVStoreAPI(dir, vlog), v_log(vlog), directory(dir) {
@@ -13,12 +21,11 @@ KVStore::~KVStore() {
 
 void KVStore::writeMemTableIntoFile() {
 	// if the mem_table is full, create a sstable
-	SSTable table(directory, mem_table.getTimestamp(), 0, true);
+	SSTable table(directory, mem_table.getTimestamp(), 0);
 
 	// write and then release memory
-	mem_table_content content_to_write = mem_table.getContent(v_log);
-	table.append(content_to_write.first, content_to_write.second);
-	delete [] content_to_write.first;
+	ssTableContent* content_to_write = mem_table.getContent(v_log);
+	table.write(content_to_write);
 
 	// TODO: check and compaction
 
@@ -38,11 +45,54 @@ void KVStore::put(key_type key, const value_type& value) {
 	}
 }
 
+std::optional<value_type> KVStore::getFromMemTable(const key_type& key) {
+	return mem_table.get(key);
+}
+
+std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
+	// TODO: iterate through all levels
+	size_t level = 0;
+
+	// path to scan files
+	std::filesystem::path path(directory);
+	path.append(def::sstable_base_directory_name + std::to_string(level));
+
+	// start scaning
+	std::vector<std::string> files;
+	utils::scanDir(path.string(), files);
+	std::sort(files.begin(), files.end(), std::greater());
+
+	for (std::string file : files) {
+		// create SSTable and search for the key
+		// TODO: use cache to optimize
+		SSTable table(path.string(), file);
+		auto result = table.get(key);
+
+		// if the key is found
+		if (result.has_value()) {
+			auto result_pair = result.value();
+			return v_log.get(result_pair.first, result_pair.second);
+		}
+	}
+
+	// not found
+	return std::nullopt;
+}
+
 /**
  * Returns the (string) value of the given key.
  * An empty string indicates not found.
  */
-std::string KVStore::get(key_type key) {
+value_type KVStore::get(key_type key) {
+	// find from memory
+	auto result_mem = getFromMemTable(key);
+	if (result_mem.has_value()) return result_mem.value();
+
+	// find from storage
+	auto result_sto = getFromSSTable(key);
+	if (result_sto.has_value()) return result_sto.value();
+	
+	// not found
 	return "";
 }
 

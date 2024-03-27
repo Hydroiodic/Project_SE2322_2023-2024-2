@@ -1,15 +1,16 @@
 #pragma once
 
+#include <optional>
 #include <string>
 #include "kvstore_api.h"
-#include "./common/definitions.h"
-#include "./memTable/memTable.h"
-#include "./ssTable/ssTable.h"
-#include "./vLog/vLog.h"
+#include "common/definitions.h"
+#include "memTable/memTable.h"
+#include "ssTable/ssTable.h"
+#include "vLog/vLog.h"
 
 using memtable::memTable;
-using memtable::mem_table_content;
 using sstable::SSTable;
+using sstable::ssTableContent;
 using vlog::vLog;
 using def::key_type;
 using def::value_type;
@@ -24,6 +25,10 @@ private:
 
 	void writeMemTableIntoFile();
 
+	// get functions
+	std::optional<value_type> getFromMemTable(const key_type& key);
+	std::optional<value_type> getFromSSTable(const key_type& key);
+
 public:
 	KVStore(const std::string &dir, const std::string &vlog);
 
@@ -31,7 +36,7 @@ public:
 
 	void put(key_type key, const value_type& value) override;
 
-	std::string get(key_type key) override;
+	value_type get(key_type key) override;
 
 	bool del(key_type key) override;
 

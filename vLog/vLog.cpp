@@ -1,6 +1,9 @@
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <filesystem>
+#include <iostream>
+#include <string>
 #include <vector>
 #include <ios>
 #include "vLog.h"
@@ -21,7 +24,13 @@ namespace vlog {
         }
 
         // open file and initialize vlog
-        file_stream.open(file_name, std::ios::in | std::ios::app | std::ios::binary);
+        file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        if (!file_stream.is_open()) {
+            file_stream.clear();
+            file_stream.open(file_name, std::ios::out);
+            file_stream.close();
+            file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        }
         initialize();
     }
 
@@ -34,7 +43,7 @@ namespace vlog {
     }
 
     uint64_t vLog::writeIntoFile(def::vLogEntry& entry) {
-        file_stream.seekp(std::ios::end);
+        file_stream.seekp(0, std::ios::end);
         uint64_t start_pos = file_stream.tellp();
 
         size_t dynamic_size = entry.value_length;
@@ -64,26 +73,27 @@ namespace vlog {
         return start_pos;
     }
 
-    value_type vLog::readFromFile(uint64_t offset) {
+    value_type vLog::readFromFile(uint64_t offset, uint32_t vlen) {
         // find the position
-        file_stream.seekg(std::ios::beg + offset);
-        def::vLogEntry entry;
+        file_stream.seekg(offset, std::ios::beg);
+        def::vLogEntry entry{};
 
-        file_stream.read((char*)&entry, def::v_log_fixed_size);
-        
+        // read from file
+        size_t length = def::v_log_fixed_size + vlen;
+        char* read_buffer = new char[length + 1];
+        file_stream.read(read_buffer, length);
+        read_buffer[length] = '\0';
+
+        // assign read data to the entry
+        memcpy((char*)&entry, read_buffer, def::v_log_fixed_size);
+        entry.value = std::string(read_buffer + def::v_log_fixed_size);
+        delete [] read_buffer;
+
         // check if ok (cycSum TODO)
         if (entry.start != def::start_sign) {
             // TODO
         }
 
-        // read from file
-        char* value_buffer = new char[entry.value_length + 1];
-        value_buffer[entry.value_length] = '\0';
-        file_stream.read(value_buffer, entry.value_length);
-
-        // assign, delete and return
-        entry.value = value_buffer;
-        delete [] value_buffer;
         return entry.value;
     }
 
@@ -99,8 +109,8 @@ namespace vlog {
         return writeIntoFile(entry);
     }
 
-    value_type vLog::get(uint64_t offset) {
-        return readFromFile(offset);
+    value_type vLog::get(uint64_t offset, uint32_t vlen) {
+        return readFromFile(offset, vlen);
     }
     
 }

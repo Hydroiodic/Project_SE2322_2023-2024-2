@@ -112,9 +112,10 @@ namespace skiplist {
 
     std::optional<value_type> skiplist_type::get(const key_type& key) const {
         baseDataNode* find_base_node = find(key, head->size(), head).first;
+        searchDataNode* first_search_data_node = find_base_node->getLayer(1);
 
         // if find the right node
-        if (*(find_base_node->getLayer(1)->key) == key) {
+        if (first_search_data_node->key && *(first_search_data_node->key) == key) {
             return find_base_node->getValues();
         }
 

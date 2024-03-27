@@ -1,8 +1,7 @@
 #include "memTable.h"
-#include <cstddef>
+#include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <utility>
 
 namespace memtable {
 
@@ -34,50 +33,50 @@ namespace memtable {
         data.clear();
     }
 
-    mem_table_content memTable::getContent(vlog::vLog& v_log) const {
+    std::optional<value_type> memTable::get(const key_type& key) const {
+        return data.get(key);
+    }
+
+    // ATTENTION! the content is allocated on the heap, so please remember to delete it
+    ssTableContent* memTable::getContent(vlog::vLog& v_log) const {
         // here we new an array of char, please remember to delete it
-        char* content = new char[def::max_file_size];
-        size_t cur_position = 0;
+        ssTableContent* content = new ssTableContent;
         
         // header of the SSTable file
-        def::sstableHeader header {
-            cur_timestamp,
-            data.size(),
-        };
+        content->header.time = cur_timestamp;
+        content->header.key_value_pair_number = data.size();
 
         // bloom filter
         // TODO
-        cur_position += def::sstable_header_size;
-        memset(content + def::sstable_header_size, 0, def::bloom_filter_size);
-        cur_position += def::bloom_filter_size;
+        memset(&content->bloomFilterContent, 0, def::bloom_filter_size);
 
         // all contents
         skiplist::skiplist_type::const_iterator it = data.cbegin(), 
             old_it = it, eit = data.cend();
-        header.min_key = it.key();
+        content->header.min_key = it.key();
 
-        while (it != eit) {
+        int index = 0;
+        for (int i = 0; i < content->header.key_value_pair_number; ++i, old_it = it++) {
+            // assertion
+            assert(it != eit);
+
             // fetch content and then write
             key_type key = it.key();
             value_type val = it.value();
-            def::sstableData cur_data {
-                it.key(),
-                v_log.append(key, val),      // TODO
-                static_cast<uint32_t>(val.length()),
-            };
-            memcpy(content + cur_position, &cur_data, def::sstable_data_size);
 
-            // continue the next iteration
-            cur_position += def::sstable_data_size;
-            old_it = it;
-            ++it;
+            // set content
+            content->data[i].key = it.key();
+            content->data[i].offset = v_log.append(key, val);
+            content->data[i].value_length = static_cast<uint32_t>(val.length());
         }
 
-        // max key is the last one
-        header.max_key = old_it.key();
-        memcpy(content, &header, def::sstable_header_size);
+        // assertion
+        assert(it == eit);
 
-        return std::make_pair(content, cur_position);
+        // max key is the last one
+        content->header.max_key = old_it.key();
+
+        return content;
     }
 }
 

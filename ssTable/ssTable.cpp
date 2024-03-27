@@ -1,7 +1,8 @@
-#include <ios>
-#include <cstddef>
+#include <algorithm>
+#include <cassert>
 #include <filesystem>
-#include <string>
+#include <sys/types.h>
+#include <utility>
 #include "ssTable.h"
 #include "../utils.h"
 #include "../common/exceptions.h"
@@ -9,7 +10,7 @@
 
 namespace sstable {
 
-    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer, bool create) 
+    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer) 
         : timestamp(ts), layer_number(layer) {
         // use a safer way to join directories
         std::filesystem::path directory(dir_name);
@@ -26,25 +27,89 @@ namespace sstable {
         file_name = directory.string();
 
         // open file
-        file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::app);
+        file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        if (!file_stream.is_open()) {
+            file_stream.clear();
+            file_stream.open(file_name, std::ios::out);
+            file_stream.close();
+            file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        }
+    }
 
-        if (!create) initialize();
+    SSTable::SSTable(const std::string& dir_name, const std::string& file) {
+        // use a safer way to join directories
+        std::filesystem::path directory(dir_name);
+        directory.append(file);
+        file_name = directory.string();
+
+        // open file
+        file_stream.open(file_name, std::ios::in | std::ios::binary);
+        initialize();
     }
 
     SSTable::~SSTable() {
+        // close the file and write into it
         file_stream.close();
+        if (content) delete content;
     }
 
     void SSTable::initialize() {
         /* maybe there's lots of things TODO? */
+        load();
+        timestamp = content->header.time;
     }
 
-    void SSTable::append(const char* data, size_t length) {
-        file_stream.write(data, length);
+    void SSTable::write(ssTableContent* content_to_write) {
+        // no existing content allowed
+        assert(!content);
+
+        // directly write int file
+        file_stream.seekp(0, std::ios::beg);
+        file_stream.write((char*)content_to_write, def::sstable_header_size + def::bloom_filter_size
+		    + def::sstable_data_size * content_to_write->header.key_value_pair_number);
+
+        // assign content
+        this->content = content_to_write;
+    }
+
+    void SSTable::load() {
+        // no existing content allowed
+        if (content) return;
+        content = new ssTableContent{};
+
+        // directly read from file
+        file_stream.seekg(0, std::ios::beg);
+        file_stream.read((char*)content, sizeof(ssTableContent));
     }
 
     void SSTable::flush() {
         file_stream.flush();
+    }
+
+    // return offset of the key-value pair in vLog
+    std::optional<std::pair<uint64_t, u_int32_t>> SSTable::get(const key_type& key) {
+        // content shouldn't be equal to nullptr
+        assert(content);
+
+        // min_key and max_key check
+        if (key < content->header.min_key || key > content->header.max_key) {
+            return std::nullopt;
+        }
+
+        // find the key
+        def::sstableData* start = content->data, 
+            * end = content->data + content->header.key_value_pair_number;
+        auto it = std::lower_bound(start, end, key, 
+            [](const def::sstableData& dat, const key_type& key) -> bool 
+            { return dat.key < key; });
+
+        // key found
+        if (it != end && it->key == key) {
+            return std::make_pair(it->offset, it->value_length);
+        }
+
+        // key not found
+        return std::nullopt;
     }
 
 }

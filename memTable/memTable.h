@@ -2,17 +2,18 @@
 
 #include "../skipList/skipList.h"
 #include "../common/definitions.h"
+#include "../ssTable/ssTable.h"
 #include "../vLog/vLog.h"
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 namespace memtable {
 
-    using value_type = def::value_type;
-    using key_type = def::key_type;
-
-    using mem_table_content = std::pair<char*, size_t>;
+    using def::value_type;
+    using def::key_type;
+    using sstable::ssTableContent;
 
     class memTable
     {
@@ -26,8 +27,10 @@ namespace memtable {
 
         bool insert(const key_type& key, const value_type& value);
         bool remove(const key_type& key);
+        std::optional<value_type> get(const key_type& key) const;
         void clear();
-        mem_table_content getContent(vlog::vLog& v_log) const;
+
+        ssTableContent* getContent(vlog::vLog& v_log) const;
 
         size_t size() const { return data.size(); }
 

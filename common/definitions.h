@@ -37,7 +37,8 @@ namespace def {
     const unsigned char start_sign = 0xff;
 
     // class vLog has a fixed-size part and a dynamic-size part
-    const size_t v_log_fixed_size = sizeof(vLogEntry) - sizeof(value_type);
+    const size_t v_log_fixed_size = sizeof(unsigned char) + sizeof(uint16_t) 
+        + sizeof(key_type) + sizeof(uint32_t);
 
     // extension name of SSTable
     const std::string sstable_extension_name = ".sst";
