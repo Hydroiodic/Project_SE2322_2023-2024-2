@@ -53,4 +53,8 @@ namespace def {
     const size_t sstable_data_size = sizeof(sstableData);
     const size_t max_key_number = (max_file_size - sstable_header_size - 
         bloom_filter_size) / sstable_data_size;
+
+    inline bool compare_filename_greater(const std::string& a, const std::string& b) {
+        return (a.length() > b.length()) || (a.length() == b.length() && a > b);
+    }
 }

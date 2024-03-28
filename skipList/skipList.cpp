@@ -42,7 +42,7 @@ namespace skiplist {
             }
             // the key of next node is larger than 'key' or the next node is nullptr
             else {
-                searchDataNode* next_node = findAndInsert(key, val, cur_layer - 1, cur_base_node);
+                searchDataNode* next_node = findAndInsert(key, val, cur_layer - 1, cur_base_node, replace);
 
                 // new node created
                 if (next_node) {
@@ -101,7 +101,7 @@ namespace skiplist {
     }
 
     void skiplist_type::put(const key_type& key, const value_type& val, bool replace) {
-        searchDataNode* new_node = findAndInsert(key, val, head->size(), head);
+        searchDataNode* new_node = findAndInsert(key, val, head->size(), head, replace);
 
         // a new layer will be added
         if (new_node) {

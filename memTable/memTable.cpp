@@ -3,11 +3,29 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <filesystem>
+#include <algorithm>
 
 namespace memtable {
 
-    memTable::memTable() {
+    memTable::memTable(const std::string& dir) {
         /* here a lot of work TODO */
+        size_t level = 0;
+        std::vector<std::string> files;
+
+        // use a safer method to access directory
+        std::filesystem::path path(dir);
+        path.append(def::sstable_base_directory_name + std::to_string(level));
+        if (!utils::dirExists(path.string())) return;
+
+        // scan the directory to find the max timestamp
+        // TODO: use data stored in file instead of names of files
+        utils::scanDir(path.string(), files);
+        auto max_it = std::max_element(files.begin(), files.end());
+
+        // read data from SSTable
+        SSTable table(path.string(), *max_it);
+        this->cur_timestamp = table.tableContent()->header.time + 1;
     }
 
     memTable::~memTable() {
@@ -91,7 +109,7 @@ namespace memtable {
             value_type val = it.value();
 
             // set content
-            content->data[i].key = it.key();
+            content->data[i].key = key;
             content->data[i].offset = v_log.append(key, val);
             content->data[i].value_length = static_cast<uint32_t>(val.length());
         }

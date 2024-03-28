@@ -1,22 +1,18 @@
 #include <algorithm>
-#include <cassert>
-#include <cstdint>
 #include <filesystem>
 #include <optional>
-#include <utility>
-#include <vector>
 #include "kvstore.h"
 #include "common/definitions.h"
 #include "skipList/skipList.h"
 #include "utils.h"
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog)
-	: KVStoreAPI(dir, vlog), v_log(vlog), directory(dir) {
-	/* maybe there's a lot of things to do but now it's empty */
+	: KVStoreAPI(dir, vlog), v_log(vlog), mem_table(dir), directory(dir) {
+	/* maybe there's a lot of things TODO */
 }
 
 KVStore::~KVStore() {
-	/* maybe there's a lot of things to do but now it's empty */
+	/* maybe there's a lot of things TODO */
 	writeMemTableIntoFile();
 }
 
@@ -69,7 +65,7 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 	// start scaning
 	std::vector<std::string> files;
 	utils::scanDir(path.string(), files);
-	std::sort(files.begin(), files.end(), std::greater());
+	std::sort(files.begin(), files.end(), def::compare_filename_greater);
 
 	// iterate through all files in level 0
 	// TODO: when the number of level is larger than 0, we should use a quicker way to search
@@ -112,7 +108,7 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
 	// start scaning
 	std::vector<std::string> files;
 	utils::scanDir(path.string(), files);
-	std::sort(files.begin(), files.end(), std::greater());
+	std::sort(files.begin(), files.end(), def::compare_filename_greater);
 
 	// iterate through all files in level 0
 	// TODO: when the number of level is larger than 0, we should use a quicker way to search
@@ -233,16 +229,16 @@ void KVStore::scan(key_type key1, key_type key2, std::list<std::pair<key_type, v
 
 	// append all contents in the skiplist to the list
 	auto it = skip_list.cbegin(), eit = skip_list.cend();
-    while (it != eit) {
+	while (it != eit) {
 		// if the pair is a deleted one
-        if (it.value() == def::delete_tag) {
+	    if (it.value() == def::delete_tag) {
 			++it; continue;
 		}
 
 		// add to the list
 		list.push_back(std::make_pair(it.key(), it.value()));
 		++it;
-    }
+	}
 }
 
 /**

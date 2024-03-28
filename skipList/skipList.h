@@ -83,7 +83,7 @@ namespace skiplist {
 
 		// method members of skiplist here
 		searchDataNode* findAndInsert(const key_type& key, const value_type& val, 
-			size_t cur_layer, baseDataNode* cur_base_node, bool replace = true);
+			size_t cur_layer, baseDataNode* cur_base_node, bool replace);
 		std::pair<baseDataNode*, size_t> find(const key_type& key,
 			size_t cur_layer, baseDataNode* cur_base_node) const;
 

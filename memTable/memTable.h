@@ -14,6 +14,7 @@ namespace memtable {
     using def::value_type;
     using def::key_type;
     using sstable::ssTableContent;
+    using sstable::SSTable;
 
     class memTable
     {
@@ -22,7 +23,7 @@ namespace memtable {
         uint64_t cur_timestamp = 0;   // TODO
 
     public:
-        explicit memTable();
+        explicit memTable(const std::string& dir);
         ~memTable();
 
         bool insert(const key_type& key, const value_type& value);

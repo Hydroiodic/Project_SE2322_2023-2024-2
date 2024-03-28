@@ -45,6 +45,8 @@ namespace sstable {
         std::optional<std::pair<uint64_t, uint32_t>> get(const key_type& key);
         std::vector<std::pair<uint64_t, uint32_t>> scan(
             const key_type& key1, const key_type& key2);
+
+        const ssTableContent* tableContent() const { return content; }
     };
 
 }
