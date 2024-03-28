@@ -1,13 +1,5 @@
 #include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
 #include <filesystem>
-#include <iostream>
-#include <string>
-#include <utility>
-#include <vector>
-#include <ios>
 #include "vLog.h"
 #include "../common/exceptions.h"
 
@@ -60,9 +52,11 @@ namespace vlog {
         char* write_buffer = new char[def::v_log_fixed_size + dynamic_size];
 
         // key, vlen and value
-        size_t buffer_start = sizeof(unsigned char) + sizeof(uint16_t);
-        memcpy(write_buffer + buffer_start, &entry.key, sizeof(key_type) + sizeof(uint32_t));
-        size_t buffer_end = buffer_start + sizeof(key_type) + sizeof(uint32_t);
+        size_t buffer_start = sizeof(entry.start) + sizeof(entry.cycSum);
+        memcpy(write_buffer + buffer_start, &entry.key, sizeof(entry.key));
+        size_t buffer_end = buffer_start + sizeof(entry.key);
+        memcpy(write_buffer + buffer_end, &entry.value_length, sizeof(entry.value_length));
+        buffer_end += sizeof(entry.value_length);
         memcpy(write_buffer + buffer_end, entry.value.c_str(), dynamic_size);
         buffer_end += dynamic_size;
 
@@ -71,7 +65,8 @@ namespace vlog {
         entry.cycSum = utils::crc16(united_entry);
 
         // start tag and cycSum
-        memcpy(write_buffer, &entry, sizeof(unsigned char) + sizeof(uint16_t));
+        memcpy(write_buffer, &entry.start, sizeof(entry.start));
+        memcpy(write_buffer + sizeof(entry.start), &entry.cycSum, sizeof(entry.cycSum));
 
         // write into file using fstream and release memory
         file_stream.write(write_buffer, def::v_log_fixed_size + dynamic_size);
@@ -104,15 +99,20 @@ namespace vlog {
         // read each part of content from the file
         read_from_buffer((char*)&entry.start, sizeof(entry.start));
         read_from_buffer((char*)&entry.cycSum, sizeof(entry.cycSum));
+        // variable for validating data
+        size_t buffer_start = cur_pos;
         read_from_buffer((char*)&entry.key, sizeof(entry.key));
         read_from_buffer((char*)&entry.value_length, sizeof(entry.value_length));
         entry.value = std::string(read_buffer + def::v_log_fixed_size);
+
+        // check if ok
+        std::vector<unsigned char> united_entry(read_buffer + buffer_start, read_buffer + length);
         delete [] read_buffer;
 
-        // check if ok (cycSum TODO)
-        if (entry.start != def::start_sign) {
-            // TODO
-        }
+        // start sign
+        assert(entry.start == def::start_sign);
+        // cycSum
+        assert(entry.cycSum == utils::crc16(united_entry));
 
         return std::make_pair(entry.key, entry.value);
     }
