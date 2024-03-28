@@ -1,10 +1,6 @@
 #include <algorithm>
-#include <cstddef>
 #include <filesystem>
-#include <functional>
 #include <optional>
-#include <string>
-#include <vector>
 #include "kvstore.h"
 #include "common/definitions.h"
 #include "utils.h"
@@ -20,6 +16,9 @@ KVStore::~KVStore() {
 }
 
 void KVStore::writeMemTableIntoFile() {
+	// if empty, no need to write into file
+	if (mem_table.empty()) return;
+
 	// if the mem_table is full, create a sstable
 	SSTable table(directory, mem_table.getTimestamp(), 0);
 
@@ -57,6 +56,11 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 	std::filesystem::path path(directory);
 	path.append(def::sstable_base_directory_name + std::to_string(level));
 
+	// if the directory doesn't exist
+	if (!utils::dirExists(path.string())) {
+		return std::nullopt;
+	}
+
 	// start scaning
 	std::vector<std::string> files;
 	utils::scanDir(path.string(), files);
@@ -86,14 +90,22 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 value_type KVStore::get(key_type key) {
 	// find from memory
 	auto result_mem = getFromMemTable(key);
-	if (result_mem.has_value()) return result_mem.value();
+	if (result_mem.has_value()) {
+		// already deleted
+		if (result_mem.value() == def::delete_tag) return value_type();
+		return result_mem.value();
+	}
 
 	// find from storage
 	auto result_sto = getFromSSTable(key);
-	if (result_sto.has_value()) return result_sto.value();
-	
+	if (result_sto.has_value()) {
+		// already deleted
+		if (result_sto.value() == def::delete_tag) return value_type();
+		return result_sto.value();
+	}
+
 	// not found
-	return "";
+	return value_type();
 }
 
 /**
@@ -101,7 +113,12 @@ value_type KVStore::get(key_type key) {
  * Returns false iff the key is not found.
  */
 bool KVStore::del(key_type key) {
-	return false;
+	// not found
+	if (get(key) == value_type()) return false;
+
+	// insert a delete pair
+	put(key, def::delete_tag);
+	return true;
 }
 
 /**
@@ -109,7 +126,39 @@ bool KVStore::del(key_type key) {
  * including memtable and all sstables files.
  */
 void KVStore::reset() {
+	// clear mem_table
+	// TODO: there's something wrong
+	mem_table.clear();
 
+	// delete sstable files
+	size_t level_num = 0;
+	std::filesystem::path directory_name(directory);
+	directory_name.append(def::sstable_base_directory_name + std::to_string(level_num));
+	while (utils::dirExists(directory_name.string())) {
+		// basic variables
+		std::vector<std::string> files;
+		std::filesystem::path path(directory_name);
+		utils::scanDir(directory_name, files);
+
+		// remove files
+		for (auto file : files) {
+			// use a safer method to deal with path
+			std::filesystem::path cur_file_path(path);
+			cur_file_path.append(file);
+			utils::rmfile(cur_file_path.string());
+		}
+
+		// remove the directory
+		utils::rmdir(path.string());
+
+		// next directory
+		++level_num;
+		directory_name = directory_name.parent_path()
+			.append(def::sstable_base_directory_name + std::to_string(level_num));
+	}
+
+	// clear the vlog file
+	v_log.clear();
 }
 
 /**

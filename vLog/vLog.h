@@ -18,8 +18,10 @@ namespace vlog {
         std::fstream file_stream;
 
         // tail and head of LSMTree
-        std::uint64_t tail, head;
+        std::uint64_t tail = 0, head = 0;
         void initialize();
+
+        void createAndOpenFile();
 
         // use this function to deal with different types of key-value pair
         uint64_t writeIntoFile(def::vLogEntry& entry);
@@ -31,6 +33,8 @@ namespace vlog {
 
         uint64_t append(const key_type& key, const value_type& val);
         value_type get(uint64_t offset, uint32_t vlen);
+
+        void clear();
     };
 
 }

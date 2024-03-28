@@ -33,6 +33,7 @@ namespace memtable {
         ssTableContent* getContent(vlog::vLog& v_log) const;
 
         size_t size() const { return data.size(); }
+        bool empty() const { return data.size() == 0; }
 
         void setTimestamp(uint64_t new_timestamp) { cur_timestamp = new_timestamp; }
         uint64_t getTimestamp() const { return cur_timestamp; }

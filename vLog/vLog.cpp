@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -24,13 +25,7 @@ namespace vlog {
         }
 
         // open file and initialize vlog
-        file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
-        if (!file_stream.is_open()) {
-            file_stream.clear();
-            file_stream.open(file_name, std::ios::out);
-            file_stream.close();
-            file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
-        }
+        createAndOpenFile();
         initialize();
     }
 
@@ -40,6 +35,20 @@ namespace vlog {
 
     void vLog::initialize() {
         /* there's a lot of things TODO */
+    }
+
+    void vLog::createAndOpenFile() {
+        // the file shouldn't be opened now
+        assert(!file_stream.is_open());
+
+        // try to open first, if failing, then create it
+        file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        if (!file_stream.is_open()) {
+            file_stream.clear();
+            file_stream.open(file_name, std::ios::out);
+            file_stream.close();
+            file_stream.open(file_name, std::ios::in | std::ios::out | std::ios::binary);
+        }
     }
 
     uint64_t vLog::writeIntoFile(def::vLogEntry& entry) {
@@ -111,6 +120,19 @@ namespace vlog {
 
     value_type vLog::get(uint64_t offset, uint32_t vlen) {
         return readFromFile(offset, vlen);
+    }
+
+    void vLog::clear() {
+        // close and then delete the file
+        file_stream.close();
+        utils::rmfile(file_name);
+
+        // truncate and re-open the file
+        createAndOpenFile();
+        assert(file_stream.is_open());
+
+        // related variables
+        head = tail = 0;
     }
     
 }
