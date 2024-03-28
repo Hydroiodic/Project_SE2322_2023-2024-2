@@ -95,7 +95,17 @@ namespace vlog {
         read_buffer[length] = '\0';
 
         // assign read data to the entry
-        memcpy((char*)&entry, read_buffer, def::v_log_fixed_size);
+        size_t cur_pos = 0;
+        auto read_from_buffer = [&cur_pos, &read_buffer](char* pointer, size_t size) {
+            memcpy((char*)pointer, read_buffer + cur_pos, size);
+            cur_pos += size;
+        };
+
+        // read each part of content from the file
+        read_from_buffer((char*)&entry.start, sizeof(entry.start));
+        read_from_buffer((char*)&entry.cycSum, sizeof(entry.cycSum));
+        read_from_buffer((char*)&entry.key, sizeof(entry.key));
+        read_from_buffer((char*)&entry.value_length, sizeof(entry.value_length));
         entry.value = std::string(read_buffer + def::v_log_fixed_size);
         delete [] read_buffer;
 

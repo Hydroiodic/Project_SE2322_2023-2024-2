@@ -31,7 +31,7 @@ int main() {
     // }
 
     std::list<std::pair<key_type, value_type>> list;
-    store.scan(900, 910, list);
+    store.scan(300, 400, list);
 
     for (auto i : list) {
         std::cout << i.first << ": " << i.second << '\n';
