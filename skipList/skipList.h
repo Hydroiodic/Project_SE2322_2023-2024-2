@@ -52,7 +52,7 @@ namespace skiplist {
 
 		baseDataNode*& nextNode() { return this->next; }
 		const value_type& getValues() const { return this->value; }
-		void addValue(const value_type& new_value) { value = new_value; }
+		void setValue(const value_type& new_value) { value = new_value; }
 
 		size_t size() const { return nodes.size(); }
 		searchDataNode* getLayer(size_t index) const {
@@ -82,8 +82,8 @@ namespace skiplist {
 		size_t key_number = 0;
 
 		// method members of skiplist here
-		searchDataNode* findAndInsert(const key_type& key,
-			const value_type& val, size_t cur_layer, baseDataNode* cur_base_node);
+		searchDataNode* findAndInsert(const key_type& key, const value_type& val, 
+			size_t cur_layer, baseDataNode* cur_base_node, bool replace = true);
 		std::pair<baseDataNode*, size_t> find(const key_type& key,
 			size_t cur_layer, baseDataNode* cur_base_node) const;
 
@@ -94,7 +94,7 @@ namespace skiplist {
 		explicit skiplist_type(double p = 0.5);
 		~skiplist_type();
 
-		void put(const key_type& key, const value_type& val);
+		void put(const key_type& key, const value_type& val, bool replace = true);
 		std::optional<value_type> get(const key_type& key) const;
 
 		void clear();

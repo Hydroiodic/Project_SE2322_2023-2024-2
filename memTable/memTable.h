@@ -28,6 +28,8 @@ namespace memtable {
         bool insert(const key_type& key, const value_type& value);
         bool remove(const key_type& key);
         std::optional<value_type> get(const key_type& key) const;
+        void scan(const key_type& key1, const key_type& key2, 
+            skiplist::skiplist_type& skip_list) const;
         void clear();
 
         ssTableContent* getContent(vlog::vLog& v_log) const;

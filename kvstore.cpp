@@ -1,8 +1,13 @@
 #include <algorithm>
+#include <cassert>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
+#include <utility>
+#include <vector>
 #include "kvstore.h"
 #include "common/definitions.h"
+#include "skipList/skipList.h"
 #include "utils.h"
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog)
@@ -44,7 +49,7 @@ void KVStore::put(key_type key, const value_type& value) {
 	}
 }
 
-std::optional<value_type> KVStore::getFromMemTable(const key_type& key) {
+std::optional<value_type> KVStore::getFromMemTable(const key_type& key) const {
 	return mem_table.get(key);
 }
 
@@ -66,6 +71,8 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 	utils::scanDir(path.string(), files);
 	std::sort(files.begin(), files.end(), std::greater());
 
+	// iterate through all files in level 0
+	// TODO: when the number of level is larger than 0, we should use a quicker way to search
 	for (std::string file : files) {
 		// create SSTable and search for the key
 		// TODO: use cache to optimize
@@ -75,12 +82,52 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 		// if the key is found
 		if (result.has_value()) {
 			auto result_pair = result.value();
-			return v_log.get(result_pair.first, result_pair.second);
+			return v_log.get(result_pair.first, result_pair.second).second;
 		}
 	}
 
 	// not found
 	return std::nullopt;
+}
+
+void KVStore::scanFromMemTable(const key_type& key1, const key_type& key2, 
+	skiplist::skiplist_type& skip_list) const {
+	mem_table.scan(key1, key2, skip_list);
+}
+
+void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2, 
+	skiplist::skiplist_type& skip_list) {
+	// TODO: iterate through all levels
+	size_t level = 0;
+
+	// path to scan files
+	std::filesystem::path path(directory);
+	path.append(def::sstable_base_directory_name + std::to_string(level));
+
+	// if the directory doesn't exist
+	if (!utils::dirExists(path.string())) {
+		return;
+	}
+
+	// start scaning
+	std::vector<std::string> files;
+	utils::scanDir(path.string(), files);
+	std::sort(files.begin(), files.end(), std::greater());
+
+	// iterate through all files in level 0
+	// TODO: when the number of level is larger than 0, we should use a quicker way to search
+	for (std::string file : files) {
+		// create SSTable and search for the key
+		// TODO: use cache to optimize
+		SSTable table(path.string(), file);
+		std::vector<std::pair<uint64_t, uint32_t>> vec = table.scan(key1, key2);
+
+		// scan for corresponding values
+		for (auto pair : vec) {
+			auto result_pair = v_log.get(pair.first, pair.second);
+			skip_list.put(result_pair.first, result_pair.second, false);
+		}
+	}
 }
 
 /**
@@ -164,10 +211,38 @@ void KVStore::reset() {
 /**
  * Return a list including all the key-value pair between key1 and key2.
  * keys in the list should be in an ascending order.
- * An empty string indicates not found.
+ * An empty list indicates not found.
  */
 void KVStore::scan(key_type key1, key_type key2, std::list<std::pair<key_type, value_type>>& list) {
+	// the list should be empty initially
+	assert(list.empty());
 
+	// key2 should be larger than or equal to key1
+	if (key1 > key2) {
+		return;
+	}
+
+	// use skipList to store all values found
+	skiplist::skiplist_type skip_list;
+
+	// scan from memory
+	scanFromMemTable(key1, key2, skip_list);
+
+	// scan from storage
+	scanFromSSTable(key1, key2, skip_list);
+
+	// append all contents in the skiplist to the list
+	auto it = skip_list.cbegin(), eit = skip_list.cend();
+    while (it != eit) {
+		// if the pair is a deleted one
+        if (it.value() == def::delete_tag) {
+			++it; continue;
+		}
+
+		// add to the list
+		list.push_back(std::make_pair(it.key(), it.value()));
+		++it;
+    }
 }
 
 /**

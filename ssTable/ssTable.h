@@ -6,6 +6,7 @@
 #include <fstream>
 #include <optional>
 #include "../common/definitions.h"
+#include "../skipList/skipList.h"
 
 namespace sstable {
 
@@ -41,7 +42,9 @@ namespace sstable {
         void load();
         void flush();
 
-        std::optional<std::pair<uint64_t, u_int32_t>> get(const key_type& key);
+        std::optional<std::pair<uint64_t, uint32_t>> get(const key_type& key);
+        std::vector<std::pair<uint64_t, uint32_t>> scan(
+            const key_type& key1, const key_type& key2);
     };
 
 }

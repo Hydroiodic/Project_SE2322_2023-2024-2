@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 #include <ios>
 #include "vLog.h"
@@ -82,7 +83,7 @@ namespace vlog {
         return start_pos;
     }
 
-    value_type vLog::readFromFile(uint64_t offset, uint32_t vlen) {
+    std::pair<key_type, value_type> vLog::readFromFile(uint64_t offset, uint32_t vlen) {
         // find the position
         file_stream.seekg(offset, std::ios::beg);
         def::vLogEntry entry{};
@@ -103,7 +104,7 @@ namespace vlog {
             // TODO
         }
 
-        return entry.value;
+        return std::make_pair(entry.key, entry.value);
     }
 
     uint64_t vLog::append(const key_type& key, const value_type& val) {
@@ -118,7 +119,7 @@ namespace vlog {
         return writeIntoFile(entry);
     }
 
-    value_type vLog::get(uint64_t offset, uint32_t vlen) {
+    std::pair<key_type, value_type> vLog::get(uint64_t offset, uint32_t vlen) {
         return readFromFile(offset, vlen);
     }
 

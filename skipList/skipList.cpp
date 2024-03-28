@@ -20,8 +20,8 @@ namespace skiplist {
         return static_cast<double>(std::rand()) / RAND_MAX <= p;
     }
 
-    searchDataNode* skiplist_type::findAndInsert(const key_type& key,
-        const value_type& val, size_t cur_layer, baseDataNode* cur_base_node) {
+    searchDataNode* skiplist_type::findAndInsert(const key_type& key, const value_type& val, 
+        size_t cur_layer, baseDataNode* cur_base_node, bool replace) {
 
         // continue search
         if (cur_layer) {
@@ -36,7 +36,8 @@ namespace skiplist {
 
             // find the corresponding key
             if (cur_search_node->key && *(cur_search_node->key) == key) {
-                cur_base_node->addValue(val);
+                // if replace is allowed, replace old value with new value
+                if (replace) cur_base_node->setValue(val);
                 return nullptr;
             }
             // the key of next node is larger than 'key' or the next node is nullptr
@@ -61,7 +62,7 @@ namespace skiplist {
             baseDataNode* new_base_node = new baseDataNode(key);
             new_base_node->nextNode() = cur_base_node->nextNode();
             cur_base_node->nextNode() = new_base_node;
-            new_base_node->addValue(val);
+            new_base_node->setValue(val);
             ++key_number;
             return new_base_node->addNewSearchNode();
         }
@@ -99,7 +100,7 @@ namespace skiplist {
         }
     }
 
-    void skiplist_type::put(const key_type& key, const value_type& val) {
+    void skiplist_type::put(const key_type& key, const value_type& val, bool replace) {
         searchDataNode* new_node = findAndInsert(key, val, head->size(), head);
 
         // a new layer will be added

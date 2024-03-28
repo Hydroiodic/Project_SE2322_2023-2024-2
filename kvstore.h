@@ -5,6 +5,7 @@
 #include "kvstore_api.h"
 #include "common/definitions.h"
 #include "memTable/memTable.h"
+#include "skipList/skipList.h"
 #include "ssTable/ssTable.h"
 #include "vLog/vLog.h"
 
@@ -26,8 +27,14 @@ private:
 	void writeMemTableIntoFile();
 
 	// get functions
-	std::optional<value_type> getFromMemTable(const key_type& key);
+	std::optional<value_type> getFromMemTable(const key_type& key) const;
 	std::optional<value_type> getFromSSTable(const key_type& key);
+
+	// scan functions
+	void scanFromMemTable(const key_type& key1, const key_type& key2, 
+		skiplist::skiplist_type& skip_list) const;
+	void scanFromSSTable(const key_type& key1, const key_type& key2, 
+		skiplist::skiplist_type& skip_list);
 
 public:
 	KVStore(const std::string &dir, const std::string &vlog);

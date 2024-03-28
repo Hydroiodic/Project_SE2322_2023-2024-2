@@ -25,14 +25,14 @@ namespace vlog {
 
         // use this function to deal with different types of key-value pair
         uint64_t writeIntoFile(def::vLogEntry& entry);
-        value_type readFromFile(uint64_t offset, uint32_t vlen);
+        std::pair<key_type, value_type> readFromFile(uint64_t offset, uint32_t vlen);
 
     public:
         explicit vLog(const std::string& name);
         ~vLog();
 
         uint64_t append(const key_type& key, const value_type& val);
-        value_type get(uint64_t offset, uint32_t vlen);
+        std::pair<key_type, value_type> get(uint64_t offset, uint32_t vlen);
 
         void clear();
     };

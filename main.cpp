@@ -3,8 +3,11 @@
 
 #include "kvstore.h"
 #include "./common/definitions.h"
+#include <cstddef>
 #include <iostream>
+#include <list>
 #include <string>
+#include <utility>
 
 using def::key_type;
 using def::value_type;
@@ -16,18 +19,23 @@ void sequent_query(KVStore& store, const key_type& max_key) {
 }
 
 int main() {
+    const size_t max = 1000;
     KVStore store("./data", "./data/vlog");
 
-    for (key_type i = 0; i < 1000; ++i) {
+    for (key_type i = 0; i < max; ++i) {
         store.put(i, std::to_string(i));
     }
 
-    for (key_type i = 1; i < 1000; i += 2) {
-        store.del(i);
-    }
+    // for (key_type i = 1; i < max; ++i) {
+    //     store.put(i, std::to_string(max - i));
+    // }
 
-    store.reset();
-    sequent_query(store, 1000);
+    std::list<std::pair<key_type, value_type>> list;
+    store.scan(900, 910, list);
+
+    for (auto i : list) {
+        std::cout << i.first << ": " << i.second << '\n';
+    }
 
     return 0;
 }

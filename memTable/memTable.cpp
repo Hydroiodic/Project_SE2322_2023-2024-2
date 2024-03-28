@@ -1,5 +1,6 @@
 #include "memTable.h"
 #include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -37,6 +38,32 @@ namespace memtable {
         return data.get(key);
     }
 
+    void memTable::scan(const key_type& key1, const key_type& key2, 
+        skiplist::skiplist_type& skip_list) const {
+        // use iterator to scan
+        skiplist::skiplist_type::const_iterator it = data.cbegin(), eit = data.cend();
+        size_t total_size = data.size();
+
+        // scan through all contents
+        for (int i = 0; i < total_size; ++i, ++it) {
+            // assertion, not meet the end
+            assert(it != eit);
+
+            // fetch content and then write
+            key_type key = it.key();
+
+            // if the pair is ok
+            if (key <= key2 && key >= key1) {
+                // replace is not allowed
+                skip_list.put(key, it.value(), false);
+            }
+            // if those left keys are larger than key2
+            else if (key > key2) {
+                break;
+            }
+        }
+    }
+
     // ATTENTION! the content is allocated on the heap, so please remember to delete it
     ssTableContent* memTable::getContent(vlog::vLog& v_log) const {
         // here we new an array of char, please remember to delete it
@@ -55,9 +82,8 @@ namespace memtable {
             old_it = it, eit = data.cend();
         content->header.min_key = it.key();
 
-        int index = 0;
         for (int i = 0; i < content->header.key_value_pair_number; ++i, old_it = it++) {
-            // assertion
+            // assertion, not meet the end
             assert(it != eit);
 
             // fetch content and then write

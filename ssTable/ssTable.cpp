@@ -112,4 +112,32 @@ namespace sstable {
         return std::nullopt;
     }
 
+    std::vector<std::pair<uint64_t, uint32_t>> SSTable::scan(
+        const key_type& key1, const key_type& key2) {
+        // content shouldn't be equal to nullptr
+        assert(content);
+
+        // variable holding offset-vlen pair
+        std::vector<std::pair<uint64_t, uint32_t>> vec;
+
+        // min_key and max_key check
+        if (key2 < content->header.min_key || key1 > content->header.max_key) {
+            return vec;
+        }
+
+        // find the first key larger or equal than key1
+        def::sstableData* start = content->data, 
+            * end = content->data + content->header.key_value_pair_number;
+        auto it = std::lower_bound(start, end, key1, 
+            [](const def::sstableData& dat, const key_type& key) -> bool 
+            { return dat.key < key; });
+
+        // find all pairs with a smaller key than key2
+        while (it != end && it->key <= key2) {
+            vec.push_back(std::make_pair(it->offset, it->value_length));
+            ++it;
+        }
+
+        return vec;
+    }
 }
