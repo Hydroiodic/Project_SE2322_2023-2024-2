@@ -34,6 +34,11 @@ void KVStore::writeMemTableIntoFile() {
 	mem_table.clear();
 }
 
+void KVStore::flush() {
+	// directly flush all contents into disk
+	writeMemTableIntoFile();
+}
+
 /**
  * Insert/Update the key-value pair.
  * No return values for simplicity.
@@ -45,11 +50,7 @@ void KVStore::put(key_type key, const value_type& value) {
 	}
 }
 
-std::optional<value_type> KVStore::getFromMemTable(const key_type& key) const {
-	return mem_table.get(key);
-}
-
-std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
+std::optional<std::pair<uint64_t, u_int32_t>> KVStore::getPairFromSSTable(const key_type& key) {
 	// TODO: iterate through all levels
 	size_t level = 0;
 
@@ -77,9 +78,24 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 
 		// if the key is found
 		if (result.has_value()) {
-			auto result_pair = result.value();
-			return v_log.get(result_pair.first, result_pair.second).second;
+			return result.value();
 		}
+	}
+
+	return std::nullopt;
+}
+
+
+std::optional<value_type> KVStore::getFromMemTable(const key_type& key) const {
+	return mem_table.get(key);
+}
+
+std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
+	auto pair_result = getPairFromSSTable(key);
+
+	// if found
+	if (pair_result.has_value()) {
+		return v_log.get(pair_result->first, pair_result->second).second;
 	}
 
 	// not found
@@ -245,6 +261,22 @@ void KVStore::scan(key_type key1, key_type key2, std::list<std::pair<key_type, v
  * This reclaims space from vLog by moving valid value and discarding invalid value.
  * chunk_size is the size in byte you should AT LEAST recycle.
  */
-void KVStore::gc(key_type chunk_size) {
+void KVStore::gc(uint64_t chunk_size) {
+	// check collected vLog entries here
+	std::vector<garbage_unit> garbage_to_validate = v_log.garbageCollection(chunk_size);
 
+	for (auto garbage : garbage_to_validate) {
+		def::vLogEntry entry = garbage.first;
+
+		// not in mem_table
+		if (!getFromMemTable(entry.key).has_value()) {
+			auto pair_result = getPairFromSSTable(entry.key);
+			if (pair_result.has_value() && pair_result->first == garbage.second) {
+				put(entry.key, entry.value);
+			}
+		}
+	}
+
+	flush();
 }
+

@@ -1,7 +1,5 @@
 #include "memTable.h"
 #include <cassert>
-#include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <filesystem>
 #include <algorithm>

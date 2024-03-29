@@ -1,8 +1,6 @@
 #include <algorithm>
 #include <cassert>
 #include <filesystem>
-#include <sys/types.h>
-#include <utility>
 #include "ssTable.h"
 #include "../utils.h"
 #include "../common/exceptions.h"

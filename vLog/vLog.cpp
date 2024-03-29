@@ -145,5 +145,68 @@ namespace vlog {
         // related variables
         head = tail = 0;
     }
-    
+
+    std::vector<garbage_unit> vLog::garbageCollection(uint64_t chunk_size) {
+        // read one more vLog entry
+        uint64_t read_buffer_size = std::min(chunk_size + def::v_log_fixed_size, head - tail);
+        uint64_t max_pos_allowed = std::min(chunk_size, head - tail);
+
+        // read from file
+        char* read_buffer = new char[read_buffer_size];
+        file_stream.seekg(tail, std::ios::beg);
+        file_stream.read(read_buffer, read_buffer_size);
+
+        // prepare to get key-offset pairs
+        std::vector<garbage_unit> vec;
+        size_t cur_pos = 0;
+        auto read_from_buffer = [&cur_pos, &read_buffer](char* pointer, size_t size) {
+            memcpy((char*)pointer, read_buffer + cur_pos, size);
+            cur_pos += size;
+        };
+
+        // start to get key-offset pairs
+        while (cur_pos < max_pos_allowed) {
+            // preserve offset here
+            uint64_t offset = cur_pos;
+            def::vLogEntry entry;
+
+            // read each part of content from the file
+            read_from_buffer((char*)&entry.start, sizeof(entry.start));
+            read_from_buffer((char*)&entry.cycSum, sizeof(entry.cycSum));
+            read_from_buffer((char*)&entry.key, sizeof(entry.key));
+            read_from_buffer((char*)&entry.value_length, sizeof(entry.value_length));
+
+            // read value of the entry
+            char* val = new char[entry.value_length + 1];
+            val[entry.value_length] = '\0';
+
+            if (cur_pos + entry.value_length <= read_buffer_size) {
+                // read from buffer
+                memcpy(val, read_buffer + cur_pos, entry.value_length);
+            }
+            else {
+                // read from file
+                file_stream.seekg(tail + cur_pos, std::ios::beg);
+                file_stream.read(val, entry.value_length);
+            }
+
+            // assign value and update cur_pos
+            entry.value = val;
+            delete [] val;
+            cur_pos += entry.value_length;
+
+            // TODO: assertion may be needed? however I don't wanna do it now
+
+            // push pair into the vector
+            // use std::move to accelerate
+            vec.push_back(std::make_pair(std::move(entry), tail + offset));
+        }
+
+        // garbage collection
+        delete [] read_buffer;
+        utils::de_alloc_file(file_name, tail, cur_pos);
+        tail += cur_pos;
+
+        return vec;
+    }
 }

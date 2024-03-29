@@ -8,8 +8,9 @@
 
 namespace vlog {
 
-    using key_type = def::key_type;
-    using value_type = def::value_type;
+    using def::key_type;
+    using def::value_type;
+    using garbage_unit = std::pair<def::vLogEntry, uint64_t>;
 
     class vLog
     {
@@ -35,8 +36,9 @@ namespace vlog {
         std::pair<key_type, value_type> get(uint64_t offset, uint32_t vlen);
 
         void clear();
+
+        std::vector<garbage_unit> garbageCollection(uint64_t chunk_size);
     };
 
 }
-
 

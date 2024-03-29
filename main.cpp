@@ -30,19 +30,16 @@ int main() {
     //     store.put(i, std::to_string(max - i));
     // }
 
-    store.del(10);
-    for (key_type i = max; i < max << 1; ++i) {
-        store.put(i, std::to_string(i));
+    for (key_type i = 0; i < max; i += 2) {
+        store.del(i);
     }
 
-    std::list<std::pair<key_type, value_type>> list;
-    store.scan(5, 15, list);
-
-    for (auto i : list) {
-        std::cout << i.first << ": " << i.second << '\n';
+    for (key_type i = 0; i < max; i += 2) {
+        store.get(i);
+        store.put(i, std::to_string(-(int)i));
     }
 
-    sequent_query(store, 20);
+    sequent_query(store, max);
 
     return 0;
 }

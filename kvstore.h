@@ -13,6 +13,7 @@ using memtable::memTable;
 using sstable::SSTable;
 using sstable::ssTableContent;
 using vlog::vLog;
+using vlog::garbage_unit;
 using def::key_type;
 using def::value_type;
 
@@ -25,8 +26,10 @@ private:
 	memTable mem_table;
 
 	void writeMemTableIntoFile();
+	void flush();
 
 	// get functions
+	std::optional<std::pair<uint64_t, u_int32_t>> getPairFromSSTable(const key_type& key);
 	std::optional<value_type> getFromMemTable(const key_type& key) const;
 	std::optional<value_type> getFromSSTable(const key_type& key);
 
@@ -51,5 +54,5 @@ public:
 
 	void scan(key_type key1, key_type key2, std::list<std::pair<key_type, value_type>>& list) override;
 
-	void gc(key_type chunk_size) override;
+	void gc(uint64_t chunk_size) override;
 };
