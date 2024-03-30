@@ -28,7 +28,6 @@ void KVStore::writeMemTableIntoFile() {
 	// v_log must be flushed before table is written for multi-process
 	v_log.flush();		// flush into vlog file
 	table.write(content_to_write);
-	table.flush();		// flush into sstable file
 
 	// TODO: check and compaction
 
