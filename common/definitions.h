@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <cstring>
 
 namespace def {
 
@@ -57,4 +58,11 @@ namespace def {
     inline bool compare_filename_greater(const std::string& a, const std::string& b) {
         return (a.length() > b.length()) || (a.length() == b.length() && a > b);
     }
+
+    const size_t v_log_initialization_check_size = 1000;
+
+    inline void read_from_buffer(char* dst, char* src, size_t size, size_t& pos) {
+        memcpy((char*)dst, src + pos, size);
+        pos += size;
+    };
 }

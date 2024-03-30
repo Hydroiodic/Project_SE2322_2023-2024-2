@@ -34,6 +34,7 @@ namespace vlog {
 
         uint64_t append(const key_type& key, const value_type& val);
         std::pair<key_type, value_type> get(uint64_t offset, uint32_t vlen);
+        void flush();
 
         void clear();
 

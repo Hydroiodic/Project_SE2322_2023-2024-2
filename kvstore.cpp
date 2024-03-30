@@ -25,6 +25,7 @@ void KVStore::writeMemTableIntoFile() {
 
 	// write and then release memory
 	ssTableContent* content_to_write = mem_table.getContent(v_log);
+	v_log.flush();		// flush into the file
 	table.write(content_to_write);
 
 	// TODO: check and compaction

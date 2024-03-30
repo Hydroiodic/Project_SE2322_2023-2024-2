@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cassert>
 #include <filesystem>
+#include <iostream>
 #include "vLog.h"
 #include "../common/exceptions.h"
 
@@ -27,7 +29,72 @@ namespace vlog {
     }
 
     void vLog::initialize() {
-        /* there's a lot of things TODO */
+        // prepare to assign for head
+        size_t cur_pos = utils::seek_data_block(file_name);
+        def::vLogEntry entry;
+        unsigned char* read_buffer = new unsigned char[def::v_log_fixed_size];
+        unsigned char* check_buffer = new unsigned char[def::v_log_initialization_check_size];
+
+        // head here
+        file_stream.seekp(0, std::ios::end);
+        head = file_stream.tellp();
+
+        // read from file
+        file_stream.seekg(0, std::ios::beg);
+
+        while (cur_pos < head) {
+            // read bytes shouldn't exceed all left bytes
+            size_t bound = std::min(head - cur_pos, def::v_log_initialization_check_size);
+            file_stream.seekg(cur_pos, std::ios::beg);
+            file_stream.read((char*)check_buffer, bound);
+
+            bool found = false;
+            for (int i = 0; i < bound; ++i, ++cur_pos) {
+                if (check_buffer[i] == def::start_sign) {
+                    // read from file into buffer
+                    file_stream.seekg(cur_pos, std::ios::beg);
+                    file_stream.read((char*)read_buffer, def::v_log_fixed_size);
+
+                    // read from buffer into entry
+                    size_t accumulated_count = 0;
+                    def::read_from_buffer((char*)&entry.start, (char*)read_buffer, 
+                        sizeof(entry.start), accumulated_count);
+                    def::read_from_buffer((char*)&entry.cycSum, (char*)read_buffer, 
+                        sizeof(entry.cycSum), accumulated_count);
+                    size_t start_pos = accumulated_count;
+                    def::read_from_buffer((char*)&entry.key, (char*)read_buffer, 
+                        sizeof(entry.key), accumulated_count);
+                    def::read_from_buffer((char*)&entry.value_length, (char*)read_buffer, 
+                        sizeof(entry.value_length), accumulated_count);
+
+                    // value here
+                    char* val = new char[entry.value_length + 1];
+                    val[entry.value_length] = '\0';
+                    file_stream.read(val, entry.value_length);
+
+                    // try to validate the entry
+                    std::vector<unsigned char> vec(read_buffer + start_pos, 
+                        read_buffer + accumulated_count);
+                    vec.insert(vec.cend(), val, val + entry.value_length);
+                    uint16_t calculated_cycSum = utils::crc16(vec);
+                    delete [] val;
+
+                    // find the right entry
+                    if (entry.cycSum == calculated_cycSum) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            // the right entry has been found
+            if (found) break;
+        }
+
+        // assign tail and release memory
+        tail = cur_pos;
+        delete [] read_buffer;
+        delete [] check_buffer;
     }
 
     void vLog::createAndOpenFile() {
@@ -91,18 +158,17 @@ namespace vlog {
 
         // assign read data to the entry
         size_t cur_pos = 0;
-        auto read_from_buffer = [&cur_pos, &read_buffer](char* pointer, size_t size) {
-            memcpy((char*)pointer, read_buffer + cur_pos, size);
-            cur_pos += size;
-        };
-
         // read each part of content from the file
-        read_from_buffer((char*)&entry.start, sizeof(entry.start));
-        read_from_buffer((char*)&entry.cycSum, sizeof(entry.cycSum));
+        def::read_from_buffer((char*)&entry.start, (char*)read_buffer, 
+            sizeof(entry.start), cur_pos);
+        def::read_from_buffer((char*)&entry.cycSum, (char*)read_buffer, 
+            sizeof(entry.cycSum), cur_pos);
         // variable for validating data
         size_t buffer_start = cur_pos;
-        read_from_buffer((char*)&entry.key, sizeof(entry.key));
-        read_from_buffer((char*)&entry.value_length, sizeof(entry.value_length));
+        def::read_from_buffer((char*)&entry.key, (char*)read_buffer, 
+            sizeof(entry.key), cur_pos);
+        def::read_from_buffer((char*)&entry.value_length, (char*)read_buffer, 
+            sizeof(entry.value_length), cur_pos);
         entry.value = std::string(read_buffer + def::v_log_fixed_size);
 
         // check if ok
@@ -133,6 +199,10 @@ namespace vlog {
         return readFromFile(offset, vlen);
     }
 
+    void vLog::flush() {
+        file_stream.flush();
+    }
+
     void vLog::clear() {
         // close and then delete the file
         file_stream.close();
@@ -159,10 +229,6 @@ namespace vlog {
         // prepare to get key-offset pairs
         std::vector<garbage_unit> vec;
         size_t cur_pos = 0;
-        auto read_from_buffer = [&cur_pos, &read_buffer](char* pointer, size_t size) {
-            memcpy((char*)pointer, read_buffer + cur_pos, size);
-            cur_pos += size;
-        };
 
         // start to get key-offset pairs
         while (cur_pos < max_pos_allowed) {
@@ -171,10 +237,14 @@ namespace vlog {
             def::vLogEntry entry;
 
             // read each part of content from the file
-            read_from_buffer((char*)&entry.start, sizeof(entry.start));
-            read_from_buffer((char*)&entry.cycSum, sizeof(entry.cycSum));
-            read_from_buffer((char*)&entry.key, sizeof(entry.key));
-            read_from_buffer((char*)&entry.value_length, sizeof(entry.value_length));
+            def::read_from_buffer((char*)&entry.start, (char*)read_buffer, 
+                sizeof(entry.start), cur_pos);
+            def::read_from_buffer((char*)&entry.cycSum, (char*)read_buffer, 
+                sizeof(entry.cycSum), cur_pos);
+            def::read_from_buffer((char*)&entry.key, (char*)read_buffer, 
+                sizeof(entry.key), cur_pos);
+            def::read_from_buffer((char*)&entry.value_length, (char*)read_buffer, 
+                sizeof(entry.value_length), cur_pos);
 
             // read value of the entry
             char* val = new char[entry.value_length + 1];
