@@ -20,10 +20,11 @@ namespace memtable {
         // scan the directory to find the max timestamp
         // TODO: use data stored in file instead of names of files
         utils::scanDir(path.string(), files);
-        auto max_it = std::max_element(files.begin(), files.end());
+        if (files.empty()) return;
 
         // read data from SSTable
-        SSTable table(path.string(), *max_it);
+        std::sort(files.begin(), files.end(), def::compare_filename_greater);
+        SSTable table(path.string(), files[0]);
         this->cur_timestamp = table.tableContent()->header.time + 1;
     }
 

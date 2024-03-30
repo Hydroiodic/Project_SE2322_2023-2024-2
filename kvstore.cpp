@@ -23,10 +23,12 @@ void KVStore::writeMemTableIntoFile() {
 	// if the mem_table is full, create a sstable
 	SSTable table(directory, mem_table.getTimestamp(), 0);
 
-	// write and then release memory
+	// write vLog and memTable into disk
 	ssTableContent* content_to_write = mem_table.getContent(v_log);
-	v_log.flush();		// flush into the file
+	// v_log must be flushed before table is written for multi-process
+	v_log.flush();		// flush into vlog file
 	table.write(content_to_write);
+	table.flush();		// flush into sstable file
 
 	// TODO: check and compaction
 
@@ -264,7 +266,8 @@ void KVStore::scan(key_type key1, key_type key2, std::list<std::pair<key_type, v
  */
 void KVStore::gc(uint64_t chunk_size) {
 	// check collected vLog entries here
-	std::vector<garbage_unit> garbage_to_validate = v_log.garbageCollection(chunk_size);
+	// TODO: prevent the potential hazard caused by interrupt after gc but before insertion
+	std::vector<garbage_unit> garbage_to_validate = v_log.getGCReinsertion(chunk_size);
 
 	for (auto garbage : garbage_to_validate) {
 		def::vLogEntry entry = garbage.first;
@@ -278,6 +281,8 @@ void KVStore::gc(uint64_t chunk_size) {
 		}
 	}
 
+	// flush before collecting garbage for multi-process
 	flush();
+	v_log.garbageCollection();
 }
 

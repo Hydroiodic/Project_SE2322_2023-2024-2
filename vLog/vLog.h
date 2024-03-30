@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <string>
@@ -28,6 +29,9 @@ namespace vlog {
         uint64_t writeIntoFile(def::vLogEntry& entry);
         std::pair<key_type, value_type> readFromFile(uint64_t offset, uint32_t vlen);
 
+        // some variables for garbage collection under multi-process
+        size_t garbage_to_collect = 0;
+
     public:
         explicit vLog(const std::string& name);
         ~vLog();
@@ -38,7 +42,8 @@ namespace vlog {
 
         void clear();
 
-        std::vector<garbage_unit> garbageCollection(uint64_t chunk_size);
+        std::vector<garbage_unit> getGCReinsertion(uint64_t chunk_size);
+        void garbageCollection();
     };
 
 }

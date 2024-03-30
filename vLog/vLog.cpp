@@ -216,7 +216,7 @@ namespace vlog {
         head = tail = 0;
     }
 
-    std::vector<garbage_unit> vLog::garbageCollection(uint64_t chunk_size) {
+    std::vector<garbage_unit> vLog::getGCReinsertion(uint64_t chunk_size) {
         // read one more vLog entry
         uint64_t read_buffer_size = std::min(chunk_size + def::v_log_fixed_size, head - tail);
         uint64_t max_pos_allowed = std::min(chunk_size, head - tail);
@@ -268,15 +268,20 @@ namespace vlog {
             // TODO: assertion may be needed? however I don't wanna do it now
 
             // push pair into the vector
-            // use std::move to accelerate
             vec.push_back(std::make_pair(std::move(entry), tail + offset));
         }
 
-        // garbage collection
+        // record garbage to be collected
         delete [] read_buffer;
-        utils::de_alloc_file(file_name, tail, cur_pos);
-        tail += cur_pos;
+        garbage_to_collect += cur_pos;
 
         return vec;
+    }
+
+    void vLog::garbageCollection() {
+        // separate this function apart to prevent the hazard caused accidental interruption
+        utils::de_alloc_file(file_name, tail, garbage_to_collect);
+        tail += garbage_to_collect;
+        garbage_to_collect = 0;
     }
 }
