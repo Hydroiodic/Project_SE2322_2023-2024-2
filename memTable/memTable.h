@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../skipList/skipList.h"
+#include "../bloomFilter/bloomFilter.h"
 #include "../common/definitions.h"
 #include "../ssTable/ssTable.h"
 #include "../vLog/vLog.h"
@@ -13,14 +14,18 @@ namespace memtable {
 
     using def::value_type;
     using def::key_type;
-    using sstable::ssTableContent;
+    using def::ssTableContent;
     using sstable::SSTable;
+    using bloomFilter = bloomfilter::bloomFilter<key_type>;
 
     class memTable
     {
     private:
         skiplist::skiplist_type data;
-        uint64_t cur_timestamp = 0;   // TODO
+        uint64_t cur_timestamp = 0;
+
+        // bloomFilter here
+        bloomFilter filter;
 
     public:
         explicit memTable(const std::string& dir);

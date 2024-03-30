@@ -49,6 +49,7 @@ namespace sstable {
         // close the file and write into it
         file_stream.close();
         if (content) delete content;
+        if (filter) delete filter;
     }
 
     void SSTable::initialize() {
@@ -73,11 +74,15 @@ namespace sstable {
     void SSTable::load() {
         // no existing content allowed
         if (content) return;
-        content = new ssTableContent{};
+        content = new ssTableContent;
+        filter = new bloomFilter(def::bloom_filter_size);
 
         // directly read from file
         file_stream.seekg(0, std::ios::beg);
         file_stream.read((char*)content, sizeof(ssTableContent));
+
+        // set bloomFilter
+        filter->set(content->bloomFilterContent);
     }
 
     void SSTable::flush() {
@@ -91,6 +96,11 @@ namespace sstable {
 
         // min_key and max_key check
         if (key < content->header.min_key || key > content->header.max_key) {
+            return std::nullopt;
+        }
+
+        // bloomFilter
+        if (!filter->query(key)) {
             return std::nullopt;
         }
 

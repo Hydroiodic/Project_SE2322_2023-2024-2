@@ -3,10 +3,11 @@
 #include <cstring>
 #include <filesystem>
 #include <algorithm>
+#include <optional>
 
 namespace memtable {
 
-    memTable::memTable(const std::string& dir) {
+    memTable::memTable(const std::string& dir) : filter(def::bloom_filter_size) {
         /* here a lot of work TODO */
         size_t level = 0;
         std::vector<std::string> files;
@@ -33,6 +34,7 @@ namespace memtable {
     bool memTable::insert(const key_type &key, const value_type &value) {
         // insert the value
         data.put(key, value);
+        filter.insert(key);
 
         // whether the size of the table allows more insertion
         return data.size() + 1 <= def::max_key_number;
@@ -41,6 +43,7 @@ namespace memtable {
     bool memTable::remove(const key_type &key) {
         // insert the delete tag
         data.put(key, def::delete_tag);
+        filter.insert(key);
 
         // whether the size of the table allows more insertion
         return data.size() + 1 <= def::max_key_number;
@@ -48,9 +51,11 @@ namespace memtable {
 
     void memTable::clear() {
         data.clear();
+        filter.clear();
     }
 
     std::optional<value_type> memTable::get(const key_type& key) const {
+        if (!filter.query(key)) return std::nullopt;
         return data.get(key);
     }
 
@@ -90,8 +95,7 @@ namespace memtable {
         content->header.key_value_pair_number = data.size();
 
         // bloom filter
-        // TODO
-        memset(&content->bloomFilterContent, 0, def::bloom_filter_size);
+        memcpy(&content->bloomFilterContent, filter.getContent(), def::bloom_filter_size);
 
         // all contents
         skiplist::skiplist_type::const_iterator it = data.cbegin(), 

@@ -2,16 +2,15 @@
 
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 #include "bloomFilter.h"
 #include "MurmurHash3.h"
 
 namespace bloomfilter {
 
-    typedef unsigned int uint;
-
     template <typename T>
-    bloomFilter<T>::bloomFilter(size_t m, size_t k) : m(m), k(k) {
-        this->hash_array = new uint[m]{};
+    bloomFilter<T>::bloomFilter(size_t m, size_t k) : byte_count(m), bit_count(m << 3), k(k) {
+        this->hash_array = new unsigned char[byte_count]{};
     }
 
     template <typename T>
@@ -22,42 +21,46 @@ namespace bloomfilter {
     template <typename T>
     void bloomFilter<T>::insert(const T &key) {
         for (uint32_t i = 0; i < k; ++i) {
-            uint64_t hash[2]{};
+            uint32_t hash[4];
             // calculate hash value
             MurmurHash3_x64_128(&key, sizeof(key), i, hash);
-            // insert into the array
-            ++hash_array[hash[0] % m];
+            for (uint32_t j = 0; j < 4; ++j) {
+                // calculate for the position
+                size_t bits = hash[j] % bit_count;
+                size_t byte_no = bits / 8, bit_no = bits % 8;
+                // insert into the array
+                hash_array[byte_no] |= 1 << bit_no;
+            }
         }
-    }
-
-    template <typename T>
-    bool bloomFilter<T>::remove(const T &key) {
-        // if key isn't in the bloom filter
-        if (!query(key)) return false;
-
-        // remove the key by decrease each value by 1
-        for (uint32_t i = 0; i < k; ++i) {
-            uint64_t hash[2]{};
-            // calculate hash value
-            MurmurHash3_x64_128(&key, sizeof(key), i, hash);
-            // the value in the hash array is 0
-            --hash_array[hash[0] % m];
-        }
-        return true;
     }
 
     template <typename T>
     bool bloomFilter<T>::query(const T &key) const {
         for (uint32_t i = 0; i < k; ++i) {
-            uint64_t hash[2]{};
+            uint32_t hash[4];
             // calculate hash value
             MurmurHash3_x64_128(&key, sizeof(key), i, hash);
-            // the value in the hash array is 0
-            if (!hash_array[hash[0] % m]) return false;
+            for (uint32_t j = 0; j < 4; ++j) {
+                // calculate for the position
+                size_t bits = hash[j] % bit_count;
+                size_t byte_no = bits / 8, bit_no = bits % 8;
+                // the value in the hash array is 0
+                if (!((hash_array[byte_no] >> bit_no) & 1)) return false;
+            }
         }
 
         // all is 1, but may be mistaken
         return true;
+    }
+
+    template <typename T>
+    void bloomFilter<T>::clear() {
+        memset(hash_array, 0, byte_count);
+    }
+
+    template <typename T>
+    void bloomFilter<T>::set(const unsigned char* src) {
+        memcpy(hash_array, src, byte_count);
     }
 
 }

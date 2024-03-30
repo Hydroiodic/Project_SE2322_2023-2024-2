@@ -11,26 +11,6 @@ namespace def {
     using key_type = uint64_t;
     using value_type = std::string;
 
-    struct sstableHeader {
-        uint64_t time;
-        uint64_t key_value_pair_number;
-        def::key_type min_key, max_key;
-    };
-
-    struct sstableData {
-        key_type key;
-        uint64_t offset;
-        uint32_t value_length;
-    };
-
-    struct vLogEntry {
-        unsigned char start;
-        uint16_t cycSum;
-        key_type key;
-        uint32_t value_length;
-        value_type value;
-    };
-
     // tag representing deleted element
     const value_type delete_tag = "~DELETED~";
 
@@ -47,6 +27,18 @@ namespace def {
     // base name of directories storing sstable
     const std::string sstable_base_directory_name = "level-";
 
+    struct sstableHeader {
+        uint64_t time;
+        uint64_t key_value_pair_number;
+        def::key_type min_key, max_key;
+    };
+
+    struct sstableData {
+        key_type key;
+        uint64_t offset;
+        uint32_t value_length;
+    };
+
     // max number of keys stored in the memory
     const size_t max_file_size = 16 * 1024;
     const size_t sstable_header_size = sizeof(sstableHeader);
@@ -55,11 +47,25 @@ namespace def {
     const size_t max_key_number = (max_file_size - sstable_header_size - 
         bloom_filter_size) / sstable_data_size;
 
+    const size_t v_log_initialization_check_size = 1000;
+
+    struct ssTableContent {
+        def::sstableHeader header;
+        unsigned char bloomFilterContent[bloom_filter_size];
+        def::sstableData data[sstable_data_size * max_key_number];
+    };
+
+    struct vLogEntry {
+        unsigned char start;
+        uint16_t cycSum;
+        key_type key;
+        uint32_t value_length;
+        value_type value;
+    };
+
     inline bool compare_filename_greater(const std::string& a, const std::string& b) {
         return (a.length() > b.length()) || (a.length() == b.length() && a > b);
     }
-
-    const size_t v_log_initialization_check_size = 1000;
 
     inline void read_from_buffer(char* dst, char* src, size_t size, size_t& pos) {
         memcpy((char*)dst, src + pos, size);

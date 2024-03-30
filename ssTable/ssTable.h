@@ -7,17 +7,14 @@
 #include <optional>
 #include "../common/definitions.h"
 #include "../skipList/skipList.h"
+#include "../bloomFilter/bloomFilter.h"
 
 namespace sstable {
 
     using def::key_type;
     using def::value_type;
-
-    struct ssTableContent {
-        def::sstableHeader header;
-        char bloomFilterContent[def::bloom_filter_size];
-        def::sstableData data[def::sstable_data_size * def::max_key_number];
-    };
+    using def::ssTableContent;
+    using bloomFilter = bloomfilter::bloomFilter<key_type>;
 
     class SSTable
     {
@@ -30,6 +27,9 @@ namespace sstable {
 
         // read once upon a time
         ssTableContent* content = nullptr;
+
+        // bloomFilter here
+        bloomFilter* filter = nullptr;
 
     public:
         explicit SSTable(const std::string& dir_name, uint64_t ts, size_t layer);

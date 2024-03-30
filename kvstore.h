@@ -11,11 +11,11 @@
 
 using memtable::memTable;
 using sstable::SSTable;
-using sstable::ssTableContent;
 using vlog::vLog;
 using vlog::garbage_unit;
 using def::key_type;
 using def::value_type;
+using def::ssTableContent;
 
 class KVStore : public KVStoreAPI
 {
