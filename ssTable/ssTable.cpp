@@ -15,7 +15,7 @@ namespace sstable {
         directory.append(def::sstable_base_directory_name + std::to_string(layer));
 
         // start to create a new file
-        if (utils::mkdir(directory.string()) == -1) {
+        if (!utils::dirExists(directory.string()) && utils::mkdir(directory.string()) == -1) {
             throw exception::create_directory_fail();
         }
 
@@ -34,14 +34,12 @@ namespace sstable {
         }
     }
 
-    SSTable::SSTable(const std::string& dir_name, const std::string& file) {
-        // use a safer way to join directories
-        std::filesystem::path directory(dir_name);
-        directory.append(file);
-        file_name = directory.string();
-
+    SSTable::SSTable(const std::string& file_name) {
         // open file
         file_stream.open(file_name, std::ios::in | std::ios::binary);
+        assert(file_stream.is_open());
+
+        // initialization for SSTable
         initialize();
     }
 

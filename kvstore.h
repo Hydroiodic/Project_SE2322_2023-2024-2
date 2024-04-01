@@ -8,14 +8,18 @@
 #include "skipList/skipList.h"
 #include "ssTable/ssTable.h"
 #include "vLog/vLog.h"
+#include "levelManager/levelManager.h"
 
 using memtable::memTable;
 using sstable::SSTable;
 using vlog::vLog;
 using vlog::garbage_unit;
+using levelmanager::levelManager;
 using def::key_type;
 using def::value_type;
 using def::ssTableContent;
+using def::level_files;
+using def::managerFileDetail;
 
 class KVStore : public KVStoreAPI
 {
@@ -24,6 +28,7 @@ private:
 
 	vLog v_log;
 	memTable mem_table;
+	levelManager level_manager;
 
 	void writeMemTableIntoFile();
 	void flush();

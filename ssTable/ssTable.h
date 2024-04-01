@@ -33,7 +33,7 @@ namespace sstable {
 
     public:
         explicit SSTable(const std::string& dir_name, uint64_t ts, size_t layer);
-        explicit SSTable(const std::string& dir_name, const std::string& file);
+        explicit SSTable(const std::string& file_name);
         ~SSTable();
 
         void initialize();
@@ -47,6 +47,7 @@ namespace sstable {
             const key_type& key1, const key_type& key2);
 
         const ssTableContent* tableContent() const { return content; }
+        const std::string& getFileName() const { return file_name; }
     };
 
 }

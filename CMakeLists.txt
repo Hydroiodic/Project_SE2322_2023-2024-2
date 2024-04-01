@@ -13,9 +13,10 @@ add_subdirectory(skipList)
 add_subdirectory(ssTable)
 add_subdirectory(vLog)
 add_subdirectory(bloomFilter)
+add_subdirectory(levelManager)
 
 # add_executable(${PROJECT_NAME} main.cpp kvstore.cpp)
-add_executable(${PROJECT_NAME} correctness.cpp kvstore.cpp)
-# add_executable(${PROJECT_NAME} persistence.cpp kvstore.cpp)
+# add_executable(${PROJECT_NAME} correctness.cpp kvstore.cpp)
+add_executable(${PROJECT_NAME} persistence.cpp kvstore.cpp)
 
-target_link_libraries(${PROJECT_NAME} memTable skipList ssTable vLog bloomFilter)
+target_link_libraries(${PROJECT_NAME} memTable skipList ssTable vLog bloomFilter levelManager)

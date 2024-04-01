@@ -1,14 +1,29 @@
-#include <algorithm>
-#include <filesystem>
-#include <optional>
 #include "kvstore.h"
 #include "common/definitions.h"
 #include "skipList/skipList.h"
 #include "utils.h"
 
-KVStore::KVStore(const std::string &dir, const std::string &vlog)
-	: KVStoreAPI(dir, vlog), v_log(vlog), mem_table(dir), directory(dir) {
+KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(dir, vlog), 
+	directory(dir), v_log(vlog), mem_table(dir), level_manager(dir) {
 	/* maybe there's a lot of things TODO */
+	// get the max timestamp for memTable to use
+	size_t cur_level_number = level_manager.size();
+	for (int i = 0; i < cur_level_number; ++i) {
+		// get details of all files in this level
+		auto file_details = level_manager.getLevelFiles(i);
+		// the level shouldn't be empty
+		if (!file_details.empty()) {
+			// scan for max timestamp
+			uint64_t max_timestamp = 0;
+			for (managerFileDetail detail : file_details) {
+				max_timestamp = std::max(max_timestamp, detail.header.time);
+			}
+
+			// set timestamp for memTable
+			mem_table.setTimestamp(max_timestamp + 1);
+			break;
+		}
+	}
 }
 
 KVStore::~KVStore() {
@@ -20,16 +35,13 @@ void KVStore::writeMemTableIntoFile() {
 	// if empty, no need to write into file
 	if (mem_table.empty()) return;
 
-	// if the mem_table is full, create a sstable
-	SSTable table(directory, mem_table.getTimestamp(), 0);
-
 	// write vLog and memTable into disk
 	ssTableContent* content_to_write = mem_table.getContent(v_log);
 	// v_log must be flushed before table is written for multi-process
 	v_log.flush();		// flush into vlog file
-	table.write(content_to_write);
 
 	// TODO: check and compaction
+	level_manager.writeIntoSSTableFile(content_to_write);
 
 	// update mem_table
 	mem_table.setTimestamp(mem_table.getTimestamp() + 1);
@@ -56,26 +68,17 @@ std::optional<std::pair<uint64_t, u_int32_t>> KVStore::getPairFromSSTable(const 
 	// TODO: iterate through all levels
 	size_t level = 0;
 
-	// path to scan files
-	std::filesystem::path path(directory);
-	path.append(def::sstable_base_directory_name + std::to_string(level));
-
-	// if the directory doesn't exist
-	if (!utils::dirExists(path.string())) {
-		return std::nullopt;
-	}
-
 	// start scaning
-	std::vector<std::string> files;
-	utils::scanDir(path.string(), files);
-	std::sort(files.begin(), files.end(), def::compare_filename_greater);
+	if (level >= level_manager.size()) return std::nullopt;
+	level_files files = level_manager.getLevelFiles(level);
+	if (files.empty()) return std::nullopt;
 
 	// iterate through all files in level 0
 	// TODO: when the number of level is larger than 0, we should use a quicker way to search
-	for (std::string file : files) {
+	for (managerFileDetail file : files) {
 		// create SSTable and search for the key
 		// TODO: use cache to optimize
-		SSTable table(path.string(), file);
+		SSTable table(file.file_name);
 		auto result = table.get(key);
 
 		// if the key is found
@@ -124,16 +127,15 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
 	}
 
 	// start scaning
-	std::vector<std::string> files;
-	utils::scanDir(path.string(), files);
-	std::sort(files.begin(), files.end(), def::compare_filename_greater);
+	level_files files = level_manager.getLevelFiles(level);
+	if (files.empty()) return;
 
 	// iterate through all files in level 0
 	// TODO: when the number of level is larger than 0, we should use a quicker way to search
-	for (std::string file : files) {
+	for (managerFileDetail file : files) {
 		// create SSTable and search for the key
 		// TODO: use cache to optimize
-		SSTable table(path.string(), file);
+		SSTable table(file.file_name);
 		std::vector<std::pair<uint64_t, uint32_t>> vec = table.scan(key1, key2);
 
 		// scan for corresponding values
@@ -188,35 +190,11 @@ bool KVStore::del(key_type key) {
  */
 void KVStore::reset() {
 	// clear mem_table
-	// TODO: there's something wrong
 	mem_table.clear();
+	mem_table.setTimestamp(0);
 
 	// delete sstable files
-	size_t level_num = 0;
-	std::filesystem::path directory_name(directory);
-	directory_name.append(def::sstable_base_directory_name + std::to_string(level_num));
-	while (utils::dirExists(directory_name.string())) {
-		// basic variables
-		std::vector<std::string> files;
-		std::filesystem::path path(directory_name);
-		utils::scanDir(directory_name, files);
-
-		// remove files
-		for (auto file : files) {
-			// use a safer method to deal with path
-			std::filesystem::path cur_file_path(path);
-			cur_file_path.append(file);
-			utils::rmfile(cur_file_path.string());
-		}
-
-		// remove the directory
-		utils::rmdir(path.string());
-
-		// next directory
-		++level_num;
-		directory_name = directory_name.parent_path()
-			.append(def::sstable_base_directory_name + std::to_string(level_num));
-	}
+	level_manager.clear();
 
 	// clear the vlog file
 	v_log.clear();

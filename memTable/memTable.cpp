@@ -1,31 +1,12 @@
 #include "memTable.h"
 #include <cassert>
 #include <cstring>
-#include <filesystem>
-#include <algorithm>
 #include <optional>
 
 namespace memtable {
 
     memTable::memTable(const std::string& dir) : filter(def::bloom_filter_size) {
         /* here a lot of work TODO */
-        size_t level = 0;
-        std::vector<std::string> files;
-
-        // use a safer method to access directory
-        std::filesystem::path path(dir);
-        path.append(def::sstable_base_directory_name + std::to_string(level));
-        if (!utils::dirExists(path.string())) return;
-
-        // scan the directory to find the max timestamp
-        // TODO: use data stored in file instead of names of files
-        utils::scanDir(path.string(), files);
-        if (files.empty()) return;
-
-        // read data from SSTable
-        std::sort(files.begin(), files.end(), def::compare_filename_greater);
-        SSTable table(path.string(), files[0]);
-        this->cur_timestamp = table.tableContent()->header.time + 1;
     }
 
     memTable::~memTable() {
