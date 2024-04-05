@@ -2,6 +2,8 @@
 #include "common/definitions.h"
 #include "skipList/skipList.h"
 #include "utils.h"
+#include <algorithm>
+#include <cstddef>
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(dir, vlog), 
 	directory(dir), v_log(vlog), mem_table(dir), level_manager(dir) {
@@ -65,31 +67,53 @@ void KVStore::put(key_type key, const value_type& value) {
 }
 
 std::optional<std::pair<uint64_t, u_int32_t>> KVStore::getPairFromSSTable(const key_type& key) {
-	// TODO: iterate through all levels
-	size_t level = 0;
+	// TODO: levels after the first one will have quick search method
+	for (size_t level = 0; level < level_manager.size(); ++level) {
+		// start scaning
+		if (level >= level_manager.size()) return std::nullopt;
+		level_files files = level_manager.getLevelFiles(level);
+		if (files.empty()) continue;
 
-	// start scaning
-	if (level >= level_manager.size()) return std::nullopt;
-	level_files files = level_manager.getLevelFiles(level);
-	if (files.empty()) return std::nullopt;
+		// iterate through all files in each level
+		if (level) [[likely]] {
+			// if the level number is larger than 0, all files is ordered and unique
+			// use binary_search to find the first file detail whose max_key is larger than key
+			auto file_detail_less = [](const managerFileDetail& file, const key_type& key) -> bool {
+				SSTable table(file.file_name);
+				return table.tableContent()->header.max_key < key;
+			};
+			auto it = std::lower_bound(files.begin(), files.end(), key, file_detail_less);
 
-	// iterate through all files in level 0
-	// TODO: when the number of level is larger than 0, we should use a quicker way to search
-	for (managerFileDetail file : files) {
-		// create SSTable and search for the key
-		// TODO: use cache to optimize
-		SSTable table(file.file_name);
-		auto result = table.get(key);
+			// if not found
+			if (it == files.end()) continue;
 
-		// if the key is found
-		if (result.has_value()) {
-			return result.value();
+			// there's only one situation, so try to find it in the file
+			SSTable table(it->file_name);
+			auto result = table.get(key);
+
+			// if the key is found
+			if (result.has_value()) {
+				return result.value();
+			}
+		}
+		else {
+			for (managerFileDetail file : files) {
+				// create SSTable and search for the key
+				// TODO: use cache to optimize
+				SSTable table(file.file_name);
+				auto result = table.get(key);
+
+				// if the key is found
+				if (result.has_value()) {
+					return result.value();
+				}
+			}
 		}
 	}
 
+	// not found
 	return std::nullopt;
 }
-
 
 std::optional<value_type> KVStore::getFromMemTable(const key_type& key) const {
 	return mem_table.get(key);
@@ -114,34 +138,34 @@ void KVStore::scanFromMemTable(const key_type& key1, const key_type& key2,
 
 void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2, 
 	skiplist::skiplist_type& skip_list) {
-	// TODO: iterate through all levels
-	size_t level = 0;
+	// TODO: levels after the first one will have quick search method
+	for (size_t level = 0; level < level_manager.size(); ++level) {
+		// path to scan files
+		std::filesystem::path path(directory);
+		path.append(def::sstable_base_directory_name + std::to_string(level));
 
-	// path to scan files
-	std::filesystem::path path(directory);
-	path.append(def::sstable_base_directory_name + std::to_string(level));
+		// if the directory doesn't exist
+		if (!utils::dirExists(path.string())) {
+			return;
+		}
 
-	// if the directory doesn't exist
-	if (!utils::dirExists(path.string())) {
-		return;
-	}
+		// start scaning
+		level_files files = level_manager.getLevelFiles(level);
+		if (files.empty()) continue;
 
-	// start scaning
-	level_files files = level_manager.getLevelFiles(level);
-	if (files.empty()) return;
+		// iterate through all files in level 0
+		// TODO: when the number of level is larger than 0, we should use a quicker way to search
+		for (managerFileDetail file : files) {
+			// create SSTable and search for the key
+			// TODO: use cache to optimize
+			SSTable table(file.file_name);
+			std::vector<std::pair<uint64_t, uint32_t>> vec = table.scan(key1, key2);
 
-	// iterate through all files in level 0
-	// TODO: when the number of level is larger than 0, we should use a quicker way to search
-	for (managerFileDetail file : files) {
-		// create SSTable and search for the key
-		// TODO: use cache to optimize
-		SSTable table(file.file_name);
-		std::vector<std::pair<uint64_t, uint32_t>> vec = table.scan(key1, key2);
-
-		// scan for corresponding values
-		for (auto pair : vec) {
-			auto result_pair = v_log.get(pair.first, pair.second);
-			skip_list.put(result_pair.first, result_pair.second, false);
+			// scan for corresponding values
+			for (auto pair : vec) {
+				auto result_pair = v_log.get(pair.first, pair.second);
+				skip_list.put(result_pair.first, result_pair.second, false);
+			}
 		}
 	}
 }

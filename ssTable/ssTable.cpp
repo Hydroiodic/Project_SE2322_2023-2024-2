@@ -1,6 +1,8 @@
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <filesystem>
+#include <string>
 #include "ssTable.h"
 #include "../utils.h"
 #include "../common/exceptions.h"
@@ -8,7 +10,7 @@
 
 namespace sstable {
 
-    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer) 
+    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer, size_t no) 
         : timestamp(ts), layer_number(layer) {
         // use a safer way to join directories
         std::filesystem::path directory(dir_name);
@@ -20,7 +22,7 @@ namespace sstable {
         }
 
         // a safer way to use directory
-        directory.append(std::to_string(ts));
+        directory.append(std::to_string(ts) + '-' + std::to_string(no));
         directory.replace_extension(def::sstable_extension_name);
         file_name = directory.string();
 

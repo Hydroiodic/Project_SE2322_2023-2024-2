@@ -19,7 +19,7 @@ namespace memtable {
         filter.insert(key);
 
         // whether the size of the table allows more insertion
-        return data.size() + 1 <= def::max_key_number;
+        return data.size() < def::max_key_number;
     }
 
     bool memTable::remove(const key_type &key) {

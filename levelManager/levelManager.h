@@ -11,7 +11,11 @@ namespace levelmanager {
     using def::level_files;
     using def::managerFileDetail;
     using def::ssTableContent;
+    using def::sstableData;
+    using def::pq_type;
+    using def::key_type;
     using sstable::SSTable;
+    using bloomFilter = bloomfilter::bloomFilter<key_type>;
 
     class levelManager
     {
@@ -29,10 +33,14 @@ namespace levelmanager {
         level_files sortFiles(const std::vector<std::string>& files, size_t level) const;
 
         // deal with compaction
+        void checkZeroLevelCompaction();
         void checkCompaction(size_t level);
 
+        // compaction among some managerFileDetail
+        std::vector<ssTableContent*> mergeSSTable(const std::vector<managerFileDetail>& files) const;
+
         // internal funtion to write SSTable into a specific level
-        void writeIntoLevel(ssTableContent* content, size_t level);
+        void writeIntoLevel(ssTableContent* content, size_t level, size_t no = 0, size_t pos = 0);
 
     public:
         levelManager(const std::string& dir);
@@ -47,7 +55,7 @@ namespace levelmanager {
         void writeIntoSSTableFile(ssTableContent* content);
         void removeSSTableFile(const std::string& file_name, size_t level);
 
-        // TODO: use levelManager to wrap the function of scanDir
+        // TODO: use levelManager to deal with compaction
     };
 
 }

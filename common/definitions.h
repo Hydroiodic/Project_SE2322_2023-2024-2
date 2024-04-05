@@ -58,7 +58,7 @@ namespace def {
     struct ssTableContent {
         def::sstableHeader header;
         unsigned char bloomFilterContent[bloom_filter_size];
-        def::sstableData data[sstable_data_size * max_key_number];
+        def::sstableData data[max_key_number];
     };
 
     // the entry content of vLog
@@ -69,11 +69,6 @@ namespace def {
         uint32_t value_length;
         value_type value;
     };
-
-    // a function used to compare file names
-    inline bool compare_filename_greater(const std::string& a, const std::string& b) {
-        return (a.length() > b.length()) || (a.length() == b.length() && a > b);
-    }
 
     // a function to read something from buffer
     inline void read_from_buffer(char* dst, char* src, size_t size, size_t& pos) {
@@ -88,9 +83,13 @@ namespace def {
     };
     using level_files = std::deque<managerFileDetail>;
 
-    inline bool compare_file_detail_great(const managerFileDetail& a, const managerFileDetail& b) {
+    inline bool compare_file_detail_zero_level(const managerFileDetail& a, const managerFileDetail& b) {
         return a.header.time > b.header.time || 
             a.header.time == b.header.time && a.header.min_key < b.header.min_key;
+    }
+
+    inline bool compare_file_detail_other_level(const managerFileDetail& a, const managerFileDetail& b) {
+        return a.header.min_key < b.header.min_key;
     }
 
     inline std::string getLevelDirectoryPath(const std::string& dir, size_t level) {
@@ -100,4 +99,19 @@ namespace def {
 
         return path.string();
     }
+
+    // the function used to judge whether a level is full
+    inline size_t maxLevelSize(size_t level) {
+        return 1 << (level + 1);
+    }
+
+    // the type used in priority_queue when merging SSTable
+    using pq_type = std::pair<sstableData, size_t>;
+
+    // the structure used to build a less-rooted heap
+    struct pq_greater {
+        bool operator()(const pq_type& a, const pq_type& b) {
+            return a.first.key > b.first.key || a.first.key == b.first.key && a.second > b.second;
+        }
+    };
 }

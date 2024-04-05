@@ -19,25 +19,32 @@ void sequent_query(KVStore& store, const key_type& max_key) {
 }
 
 int main() {
-    const size_t max = 1000;
+    const size_t max = 2000;
     KVStore store("./data", "./data/vlog");
 
     for (key_type i = 0; i < max; ++i) {
         store.put(i, std::to_string(i));
     }
 
-    // for (key_type i = 1; i < max; ++i) {
-    //     store.put(i, std::to_string(max - i));
-    // }
+    for (key_type i = 1; i < max; ++i) {
+        store.put(i, std::to_string(max - i));
+    }
 
     for (key_type i = 0; i < max; i += 2) {
         store.del(i);
     }
 
-    for (key_type i = 0; i < max; i += 2) {
-        store.get(i);
-        store.put(i, std::to_string(-(int)i));
+    std::list<std::pair<key_type, value_type>> values;
+    store.scan(10, 1000, values);
+
+    for (auto value : values) {
+        std::cout << value.first << ' ' << value.second << '\n';
     }
+
+    // for (key_type i = 0; i < max; i += 2) {
+    //     store.get(i);
+    //     store.put(i, std::to_string(-(int)i));
+    // }
 
     sequent_query(store, max);
 
