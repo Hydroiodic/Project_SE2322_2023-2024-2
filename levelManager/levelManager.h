@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 #include "../common/definitions.h"
@@ -25,6 +26,7 @@ namespace levelmanager {
 
         // store all names of files in each level
         std::vector<level_files> levels;
+        std::vector<uint64_t> levels_time;
 
         // the parent directory of each level
         std::string directory_name;
@@ -33,7 +35,6 @@ namespace levelmanager {
         level_files sortFiles(const std::vector<std::string>& files, size_t level) const;
 
         // deal with compaction
-        void checkZeroLevelCompaction();
         void checkCompaction(size_t level);
 
         // compaction among some managerFileDetail
@@ -41,6 +42,7 @@ namespace levelmanager {
 
         // internal funtion to write SSTable into a specific level
         void writeIntoLevel(ssTableContent* content, size_t level, size_t no = 0, size_t pos = 0);
+        void createNewLevelIfNonexist(size_t level);
 
     public:
         levelManager(const std::string& dir);
@@ -54,8 +56,6 @@ namespace levelmanager {
 
         void writeIntoSSTableFile(ssTableContent* content);
         void removeSSTableFile(const std::string& file_name, size_t level);
-
-        // TODO: use levelManager to deal with compaction
     };
 
 }

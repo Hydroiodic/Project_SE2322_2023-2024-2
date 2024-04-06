@@ -41,7 +41,7 @@ namespace levelmanager {
 
         // sort with details read above
         // the method to sort differs from zero level and other levels
-        if (level) {
+        if (level) [[likely]] {
             std::sort(current_level.begin(), current_level.end(), 
                 def::compare_file_detail_other_level);
         }
@@ -70,6 +70,8 @@ namespace levelmanager {
 
             // push into vector
             levels.push_back(sortFiles(current_level, level_number));
+            // TODO: the name of files may conflict with each other
+            levels_time.push_back(levels[levels.size() - 1].size());
 
             // next iteration
             path = path.parent_path().append(def::sstable_base_directory_name + 
@@ -111,6 +113,7 @@ namespace levelmanager {
         // reset level_number and levels
         level_number = 0;
         levels.clear();
+        levels_time.clear();
     }
 
     std::vector<ssTableContent*> levelManager::mergeSSTable(
@@ -208,79 +211,95 @@ namespace levelmanager {
         return merged_contents;
     }
 
-    void levelManager::checkZeroLevelCompaction() {
-        // because level-0 is unordered, use another function to manage it
-        assert(level_number);
-        if (levels[0].size() <= def::maxLevelSize(0)) return;
+    void levelManager::checkCompaction(size_t level) {
+        /* here very very very many things TODO */
+        assert(level_number > level);
+        if (levels[level].size() <= def::maxLevelSize(level)) return;
 
-        // TODO: compaction of level-0
+        // find those SSTable files which have the smallest timestamp
+        // here some variables prepared in advance
+        std::deque<managerFileDetail> current_level_files = levels[level];
+        std::deque<managerFileDetail> files_to_be_merged;
+
+        // for different levels, there're different methods to deal with them
+        if (level) {
+            std::sort(current_level_files.begin(), current_level_files.end(), 
+                def::compare_file_detail_zero_level);
+            files_to_be_merged = std::deque<managerFileDetail>(current_level_files.begin() + 
+                def::maxLevelSize(level), current_level_files.end());
+        }
+        else {
+            files_to_be_merged = levels[level];
+            std::reverse(files_to_be_merged.begin(), files_to_be_merged.end());
+        }
+
+        // if the next level doesn't exist, create it
+        size_t next_level = level + 1;
+        createNewLevelIfNonexist(next_level);
+
+        // iterate through these files and merge them with files in the following level
         std::vector<managerFileDetail> files;
-        for (int index = levels[0].size() - 1; index >= 0; --index) {
-            // files in level 0
-            files.push_back(levels[0][index]);
+        for (auto file_detail : files_to_be_merged) {
+            // files in current level
+            files.push_back(file_detail);
 
             // deal with files in level 1
-            size_t i = 0, j = 0;
-            if (level_number > 1) [[likely]] {
-                size_t second_level_size = levels[1].size();
+            size_t i = 0, j = 0, next_level_size = levels[next_level].size();
+            assert(level_number > next_level);
 
-                // find the first managerFileDetail ...
-                for (; i < second_level_size; ++i) {
-                    if (levels[1][i].header.max_key >= levels[0][index].header.min_key) {
-                        break;
-                    }
+            // find the first managerFileDetail ...
+            for (; i < next_level_size; ++i) {
+                if (levels[next_level][i].header.max_key >= file_detail.header.min_key) {
+                    break;
                 }
+            }
 
-                // ... until the last one
-                // the range is [i, j)
-                j = i;
-                while (j < second_level_size && 
-                    levels[1][j].header.min_key <= levels[0][index].header.max_key) {
-                    files.push_back(levels[1][j]);
-                    ++j;
-                }
+            // ... until the last one
+            // the range is [i, j)
+            j = i;
+            while (j < next_level_size && 
+                levels[next_level][j].header.min_key <= file_detail.header.max_key) {
+                files.push_back(levels[next_level][j]);
+                ++j;
             }
 
             // write these SSTables into storage
             std::vector<ssTableContent*> contents_to_insert = mergeSSTable(files);
             size_t merged_file_size = contents_to_insert.size();
             for (size_t no = merged_file_size; no; --no) {
-                writeIntoLevel(contents_to_insert[no - 1], 1, no, i);
+                writeIntoLevel(contents_to_insert[no - 1], next_level, 
+                    levels_time[next_level]++, i);
             }
 
             // delete files in level 1
             i += merged_file_size; j += merged_file_size;
             for (size_t no = i; no < j; ++no) {
-                utils::rmfile(levels[1][no].file_name);
+                utils::rmfile(levels[next_level][no].file_name);
             }
-            levels[1].erase(levels[1].begin() + i, levels[1].begin() + j);
-            utils::rmfile(levels[0][index].file_name);
+            levels[next_level].erase(levels[next_level].begin() + i, levels[next_level].begin() + j);
+            utils::rmfile(file_detail.file_name);
             files.clear();
         }
 
-        // clear level 0
-        levels[0].clear();
-    }
+        // erase files in the deque of current level
+        auto removed_file_function = [&files_to_be_merged](const managerFileDetail& file) -> bool {
+            auto it = files_to_be_merged.begin(), eit = files_to_be_merged.end();
+            for (; it != eit; ++it) {
+                if (it->file_name == file.file_name) return true;
+            }
+            return false;
+        };
+        auto it = std::remove_if(levels[level].begin(), levels[level].end(), 
+            removed_file_function);
+        levels[level].erase(it, levels[level].end());
 
-    void levelManager::checkCompaction(size_t level) {
-        /* here very very very many things TODO */
-        assert(level_number > level);
-        if (levels[level].size() <= def::maxLevelSize(level)) return;
-
-        // TODO: the level is full, compaction needed
-
+        // continue to check the next level
+        checkCompaction(next_level);
     }
 
     void levelManager::writeIntoLevel(ssTableContent* content, size_t level, size_t no, size_t pos) {
-        // new level will be created
-        if (level_number <= level) {
-            // only one more level once is allowed
-            assert(level_number == level);
-            utils::mkdir(def::getLevelDirectoryPath(directory_name, level_number++));
-            levels.push_back(level_files());
-        }
-
         // the size of the vector should be equal to level_number
+        assert(level_number > level);
         assert(levels.size() == level_number);
 
         // if the mem_table is full, create a sstable
@@ -292,12 +311,28 @@ namespace levelmanager {
         levels[level].insert(levels[level].begin() + pos, new_file_detail);
     }
 
+    void levelManager::createNewLevelIfNonexist(size_t level) {
+        // if the last level is full, new level will be created
+        if (level_number <= level) [[unlikely]] {
+            // only one more level once is allowed
+            assert(level_number == level);
+            utils::mkdir(def::getLevelDirectoryPath(directory_name, level_number++));
+            levels.push_back(level_files());
+            levels_time.push_back(0);
+        }
+        assert(levels.size() == level_number);
+        assert(levels_time.size() == level_number);
+    }
+
     void levelManager::writeIntoSSTableFile(ssTableContent* content) {
+        // if the level doesn't exist, create it
+        createNewLevelIfNonexist(0);
+
         // write the content into the first level
-        writeIntoLevel(content, 0);
+        writeIntoLevel(content, 0, levels_time[0]++);
 
         // check compaction for the level
-        checkZeroLevelCompaction();
+        checkCompaction(0);
     }
 
     void levelManager::removeSSTableFile(const std::string& file_name, size_t level) {

@@ -34,12 +34,12 @@ int main() {
         store.del(i);
     }
 
-    std::list<std::pair<key_type, value_type>> values;
-    store.scan(10, 1000, values);
+    // std::list<std::pair<key_type, value_type>> values;
+    // store.scan(10, 1000, values);
 
-    for (auto value : values) {
-        std::cout << value.first << ' ' << value.second << '\n';
-    }
+    // for (auto value : values) {
+    //     std::cout << value.first << ' ' << value.second << '\n';
+    // }
 
     // for (key_type i = 0; i < max; i += 2) {
     //     store.get(i);
