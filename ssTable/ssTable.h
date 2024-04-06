@@ -32,7 +32,8 @@ namespace sstable {
         bloomFilter* filter = nullptr;
 
     public:
-        explicit SSTable(const std::string& dir_name, uint64_t ts, size_t layer, size_t no = 0);
+        explicit SSTable(const std::string& dir_name, uint64_t ts, size_t layer, 
+            const std::string& name);
         explicit SSTable(const std::string& file_name);
         ~SSTable();
 

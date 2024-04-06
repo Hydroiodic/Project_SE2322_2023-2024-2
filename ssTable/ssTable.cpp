@@ -10,8 +10,8 @@
 
 namespace sstable {
 
-    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer, size_t no) 
-        : timestamp(ts), layer_number(layer) {
+    SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer, 
+        const std::string& name) : timestamp(ts), layer_number(layer) {
         // use a safer way to join directories
         std::filesystem::path directory(dir_name);
         directory.append(def::sstable_base_directory_name + std::to_string(layer));
@@ -22,7 +22,7 @@ namespace sstable {
         }
 
         // a safer way to use directory
-        directory.append(std::to_string(ts) + '-' + std::to_string(no));
+        directory.append(name);
         directory.replace_extension(def::sstable_extension_name);
         file_name = directory.string();
 

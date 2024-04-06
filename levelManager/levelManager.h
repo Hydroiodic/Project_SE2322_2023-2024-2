@@ -31,6 +31,9 @@ namespace levelmanager {
         // the parent directory of each level
         std::string directory_name;
 
+        // the string is a unique prefix for levelManager
+        std::string file_prefix = "";
+
         // function to sort files
         level_files sortFiles(const std::vector<std::string>& files, size_t level) const;
 
@@ -41,7 +44,7 @@ namespace levelmanager {
         std::vector<ssTableContent*> mergeSSTable(const std::vector<managerFileDetail>& files) const;
 
         // internal funtion to write SSTable into a specific level
-        void writeIntoLevel(ssTableContent* content, size_t level, size_t no = 0, size_t pos = 0);
+        void writeIntoLevel(ssTableContent* content, size_t level, size_t pos = 0);
         void createNewLevelIfNonexist(size_t level);
 
     public:
@@ -56,6 +59,8 @@ namespace levelmanager {
 
         void writeIntoSSTableFile(ssTableContent* content);
         void removeSSTableFile(const std::string& file_name, size_t level);
+
+        void updatePrefix();
     };
 
 }

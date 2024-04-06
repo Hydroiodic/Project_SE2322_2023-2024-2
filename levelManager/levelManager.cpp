@@ -1,13 +1,16 @@
 #include "levelManager.h"
 #include "../utils.h"
 #include <algorithm>
-#include <cassert>
 #include <queue>
+#include <sys/time.h>
 
 namespace levelmanager {
 
     levelManager::levelManager(const std::string& dir) : directory_name(dir) {
-        /* maybe there's a lot of things TODO */
+        // update file_prefix for levelManager
+        updatePrefix();
+
+        // scan for files in each level
         scanLevels();
     }
 
@@ -71,7 +74,7 @@ namespace levelmanager {
             // push into vector
             levels.push_back(sortFiles(current_level, level_number));
             // TODO: the name of files may conflict with each other
-            levels_time.push_back(levels[levels.size() - 1].size());
+            levels_time.push_back(0);
 
             // next iteration
             path = path.parent_path().append(def::sstable_base_directory_name + 
@@ -267,8 +270,7 @@ namespace levelmanager {
             std::vector<ssTableContent*> contents_to_insert = mergeSSTable(files);
             size_t merged_file_size = contents_to_insert.size();
             for (size_t no = merged_file_size; no; --no) {
-                writeIntoLevel(contents_to_insert[no - 1], next_level, 
-                    levels_time[next_level]++, i);
+                writeIntoLevel(contents_to_insert[no - 1], next_level, i);
             }
 
             // delete files in level 1
@@ -297,17 +299,19 @@ namespace levelmanager {
         checkCompaction(next_level);
     }
 
-    void levelManager::writeIntoLevel(ssTableContent* content, size_t level, size_t no, size_t pos) {
+    void levelManager::writeIntoLevel(ssTableContent* content, size_t level, size_t pos) {
         // the size of the vector should be equal to level_number
         assert(level_number > level);
         assert(levels.size() == level_number);
+        assert(levels_time.size() == level_number);
 
         // if the mem_table is full, create a sstable
-        SSTable table(directory_name, content->header.time, level, no);
+        std::string file_name = file_prefix + '-' + std::to_string(levels_time[level]++);
+        SSTable table(directory_name, content->header.time, level, file_name);
         table.write(content);
 
+        // insert into the vector
         managerFileDetail new_file_detail { table.getFileName(), content->header };
-        // TODO: those level with an index larger than 0 should be ordered
         levels[level].insert(levels[level].begin() + pos, new_file_detail);
     }
 
@@ -329,7 +333,7 @@ namespace levelmanager {
         createNewLevelIfNonexist(0);
 
         // write the content into the first level
-        writeIntoLevel(content, 0, levels_time[0]++);
+        writeIntoLevel(content, 0);
 
         // check compaction for the level
         checkCompaction(0);
@@ -352,6 +356,13 @@ namespace levelmanager {
 
         // remove from deque
         levels[level].erase(it);
+    }
+
+    void levelManager::updatePrefix() {
+        // use timestamp and pid to construct a unique prefix for levelManager
+        timeval time_structure;
+        gettimeofday(&time_structure, nullptr);
+        file_prefix = std::to_string(time_structure.tv_usec) + std::to_string(getpid());
     }
 
 }
