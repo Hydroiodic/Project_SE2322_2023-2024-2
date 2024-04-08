@@ -41,7 +41,8 @@ namespace levelmanager {
         void checkCompaction(size_t level);
 
         // compaction among some managerFileDetail
-        std::vector<ssTableContent*> mergeSSTable(const std::vector<managerFileDetail>& files) const;
+        std::vector<ssTableContent*> mergeSSTable(const std::vector<managerFileDetail>& files, 
+            bool remove_deleted_pair) const;
 
         // internal funtion to write SSTable into a specific level
         void writeIntoLevel(ssTableContent* content, size_t level, size_t pos = 0);

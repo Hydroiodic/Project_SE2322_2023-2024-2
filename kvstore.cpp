@@ -3,11 +3,9 @@
 #include "skipList/skipList.h"
 #include "utils.h"
 #include <algorithm>
-#include <cstddef>
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(dir, vlog), 
 	directory(dir), v_log(vlog), mem_table(dir), level_manager(dir) {
-	/* maybe there's a lot of things TODO */
 	// get the max timestamp for memTable to use
 	size_t cur_level_number = level_manager.size();
 	for (int i = 0; i < cur_level_number; ++i) {
@@ -29,7 +27,7 @@ KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(d
 }
 
 KVStore::~KVStore() {
-	/* maybe there's a lot of things TODO */
+	// write MemTable into file when the instance is destroyed
 	writeMemTableIntoFile();
 }
 
@@ -124,6 +122,10 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 
 	// if found
 	if (pair_result.has_value()) {
+		// if pair_result represents a deleted pair
+		if (!pair_result->second) return std::nullopt;
+
+		// get the value from vlog file
 		return v_log.get(pair_result->first, pair_result->second).second;
 	}
 
@@ -163,6 +165,10 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
 
 			// scan for corresponding values
 			for (auto pair : vec) {
+				// if the pair represents a deleted pair
+				if (!pair.second) continue;
+
+				// get value from vlog file and then put it into a skiplist
 				auto result_pair = v_log.get(pair.first, pair.second);
 				skip_list.put(result_pair.first, result_pair.second, false);
 			}

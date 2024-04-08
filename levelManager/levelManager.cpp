@@ -120,7 +120,7 @@ namespace levelmanager {
     }
 
     std::vector<ssTableContent*> levelManager::mergeSSTable(
-        const std::vector<managerFileDetail>& files) const {
+        const std::vector<managerFileDetail>& files, bool remove_deleted_pair) const {
         // some definitions
         std::vector<ssTableContent*> merged_contents;
         std::vector<SSTable*> contents;
@@ -181,8 +181,11 @@ namespace levelmanager {
             if (initialized && current_key == front_element.first.key) [[unlikely]] continue;
 
             // insert into these structures
-            current_content->data[index_in_content_data++] = front_element.first;
-            filter.insert(front_element.first.key);
+            if (front_element.first.value_length || !remove_deleted_pair) [[likely]] {
+                // if the pair is a deleted one and remove_deleted_pair is specified
+                current_content->data[index_in_content_data++] = front_element.first;
+                filter.insert(front_element.first.key);
+            }
             current_key = front_element.first.key;
             initialized = true;
 
@@ -223,6 +226,9 @@ namespace levelmanager {
         // here some variables prepared in advance
         std::deque<managerFileDetail> current_level_files = levels[level];
         std::deque<managerFileDetail> files_to_be_merged;
+
+        // if the level is among the last two, we should remove deleted pair during compaction
+        bool remove_deleted_pair = level_number <= level + 2;
 
         // for different levels, there're different methods to deal with them
         if (level) {
@@ -267,7 +273,7 @@ namespace levelmanager {
             }
 
             // write these SSTables into storage
-            std::vector<ssTableContent*> contents_to_insert = mergeSSTable(files);
+            std::vector<ssTableContent*> contents_to_insert = mergeSSTable(files, remove_deleted_pair);
             size_t merged_file_size = contents_to_insert.size();
             for (size_t no = merged_file_size; no; --no) {
                 writeIntoLevel(contents_to_insert[no - 1], next_level, i);

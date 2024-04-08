@@ -94,8 +94,16 @@ namespace memtable {
 
             // set content
             content->data[i].key = key;
-            content->data[i].offset = v_log.append(key, val);
-            content->data[i].value_length = static_cast<uint32_t>(val.length());
+            // if the pair is a deleted one
+            if (val == def::delete_tag) {
+                content->data[i].offset = 0;
+                content->data[i].value_length = 0;
+            }
+            // insert the value into vlog and get offset
+            else {
+                content->data[i].offset = v_log.append(key, val);
+                content->data[i].value_length = static_cast<uint32_t>(val.length());
+            }
         }
 
         // assertion
