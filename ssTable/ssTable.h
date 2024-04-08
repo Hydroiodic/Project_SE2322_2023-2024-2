@@ -14,6 +14,7 @@ namespace sstable {
     using def::key_type;
     using def::value_type;
     using def::ssTableContent;
+    using def::ssTableData;
     using bloomFilter = bloomfilter::bloomFilter<key_type>;
 
     class SSTable
@@ -44,8 +45,7 @@ namespace sstable {
         void flush();
 
         std::optional<std::pair<uint64_t, uint32_t>> get(const key_type& key);
-        std::vector<std::pair<uint64_t, uint32_t>> scan(
-            const key_type& key1, const key_type& key2);
+        std::vector<ssTableData> scan(const key_type& key1, const key_type& key2);
 
         const ssTableContent* tableContent() const { return content; }
         const std::string& getFileName() const { return file_name; }

@@ -7,6 +7,11 @@
 #include <string>
 #include <cstring>
 
+namespace sstable {
+    // weak definition for sstable::SSTable
+    class SSTable;
+}
+
 namespace def {
 
     // types of key and value
@@ -30,14 +35,14 @@ namespace def {
     const std::string sstable_base_directory_name = "level-";
 
     // the header of SSTable
-    struct sstableHeader {
+    struct ssTableHeader {
         uint64_t time;
         uint64_t key_value_pair_number;
         def::key_type min_key, max_key;
     };
 
     // the data of SSTable
-    struct sstableData {
+    struct ssTableData {
         key_type key;
         uint64_t offset;
         uint32_t value_length;
@@ -45,9 +50,9 @@ namespace def {
 
     // max number of keys stored in the memory
     const size_t max_file_size = 16 * 1024;
-    const size_t sstable_header_size = sizeof(sstableHeader);
+    const size_t sstable_header_size = sizeof(ssTableHeader);
     const size_t bloom_filter_size = 8192;
-    const size_t sstable_data_size = sizeof(sstableData);
+    const size_t sstable_data_size = sizeof(ssTableData);
     const size_t max_key_number = (max_file_size - sstable_header_size - 
         bloom_filter_size) / sstable_data_size;
 
@@ -56,9 +61,9 @@ namespace def {
 
     // the content of one SSTable
     struct ssTableContent {
-        def::sstableHeader header;
+        def::ssTableHeader header;
         unsigned char bloomFilterContent[bloom_filter_size];
-        def::sstableData data[max_key_number];
+        def::ssTableData data[max_key_number];
     };
 
     // the entry content of vLog
@@ -79,7 +84,8 @@ namespace def {
     // the detail of a SSTable used by levelManager
     struct managerFileDetail {
         std::string file_name;
-        def::sstableHeader header;
+        def::ssTableHeader header;
+        sstable::SSTable* table_cache = nullptr;
     };
     using level_files = std::deque<managerFileDetail>;
 
@@ -106,7 +112,7 @@ namespace def {
     }
 
     // the type used in priority_queue when merging SSTable
-    using pq_type = std::pair<sstableData, size_t>;
+    using pq_type = std::pair<ssTableData, size_t>;
 
     // the structure used to build a less-rooted heap
     struct pq_greater {
@@ -114,4 +120,7 @@ namespace def {
             return a.first.key > b.first.key || a.first.key == b.first.key && a.second > b.second;
         }
     };
+
+    // the number of levels that allow cache exists
+    const size_t cached_levels = 4;
 }

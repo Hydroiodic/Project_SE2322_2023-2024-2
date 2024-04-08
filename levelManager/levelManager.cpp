@@ -1,6 +1,7 @@
 #include "levelManager.h"
 #include "../utils.h"
 #include <algorithm>
+#include <cstddef>
 #include <queue>
 #include <sys/time.h>
 
@@ -15,7 +16,13 @@ namespace levelmanager {
     }
 
     levelManager::~levelManager() {
-        /* maybe there's a lot of things TODO */
+        // release memory allocated before for SSTable
+        for (size_t i = 0; i < level_number && i < def::cached_levels; ++i) {
+            for (auto file : levels[i]) {
+                // delete [] is a safer way to release memory
+                if (file.table_cache) delete file.table_cache;
+            }
+        }
     }
 
     level_files levelManager::sortFiles(const std::vector<std::string>& files, size_t level) const {
@@ -29,15 +36,17 @@ namespace levelmanager {
             path.append(def::sstable_base_directory_name + std::to_string(level));
             path.append(file);
 
-            // open file
-            std::fstream stream;
-            stream.open(path.string(), std::ios::in | std::ios::binary);
-            assert(stream.is_open());
+            // open SSTable and create managerFileDetail for it
+            SSTable* table = new SSTable(path.string());
+            managerFileDetail detail { path.string(), table->tableContent()->header };
 
-            // read header from file
-            managerFileDetail detail { path.string() };
-            stream.read((char*)&detail.header, sizeof(detail.header));
-            stream.close();
+            // store SSTable into cache or delete it
+            if (level < def::cached_levels) {
+                detail.table_cache = table;
+            }
+            else {
+                delete table;
+            }
 
             current_level.push_back(detail);
         }
@@ -73,7 +82,6 @@ namespace levelmanager {
 
             // push into vector
             levels.push_back(sortFiles(current_level, level_number));
-            // TODO: the name of files may conflict with each other
             levels_time.push_back(0);
 
             // next iteration
@@ -133,8 +141,16 @@ namespace levelmanager {
 
         uint64_t max_time = 0;
         for (size_t i = 0; i < file_number; ++i) {
-            // create table instance and push the first data element into pq
-            SSTable* table = new SSTable(files[i].file_name);
+            // create table instance while checking cache
+            SSTable* table;
+            if (files[i].table_cache) {
+                table = files[i].table_cache;
+            }
+            else {
+                table = new SSTable(files[i].file_name);
+            }
+
+            // push the first data element into pq
             contents.push_back(table);
             pq.push(std::make_pair(table->tableContent()->data[0], i));
             index.push_back(1);
@@ -218,7 +234,6 @@ namespace levelmanager {
     }
 
     void levelManager::checkCompaction(size_t level) {
-        /* here very very very many things TODO */
         assert(level_number > level);
         if (levels[level].size() <= def::maxLevelSize(level)) return;
 
@@ -313,11 +328,23 @@ namespace levelmanager {
 
         // if the mem_table is full, create a sstable
         std::string file_name = file_prefix + '-' + std::to_string(levels_time[level]++);
-        SSTable table(directory_name, content->header.time, level, file_name);
-        table.write(content);
+        SSTable* table = new SSTable(directory_name, content->header.time, level, file_name);
+        table->write(content);
+
+        // create a instance of managerFileDetail
+        managerFileDetail new_file_detail { table->getFileName(), content->header };
+
+        // determine whether the SSTable is to be cached
+        if (level < def::cached_levels) {
+            // if yes, assign it to new_file_detail.table_cache
+            new_file_detail.table_cache = table;
+        }
+        else {
+            // if not, just deleting it is ok
+            delete table;
+        }
 
         // insert into the vector
-        managerFileDetail new_file_detail { table.getFileName(), content->header };
         levels[level].insert(levels[level].begin() + pos, new_file_detail);
     }
 
@@ -361,6 +388,7 @@ namespace levelmanager {
         assert(it != eit);
 
         // remove from deque
+        if (it->table_cache) delete it->table_cache;
         levels[level].erase(it);
     }
 

@@ -12,7 +12,7 @@ namespace levelmanager {
     using def::level_files;
     using def::managerFileDetail;
     using def::ssTableContent;
-    using def::sstableData;
+    using def::ssTableData;
     using def::pq_type;
     using def::key_type;
     using sstable::SSTable;

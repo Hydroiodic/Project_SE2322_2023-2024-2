@@ -6,11 +6,11 @@
 namespace memtable {
 
     memTable::memTable(const std::string& dir) : filter(def::bloom_filter_size) {
-        /* here a lot of work TODO */
+        /* here's nothing to do??? */
     }
 
     memTable::~memTable() {
-        /* here a lot of work TODO */
+        /* here's nothing to do??? */
     }
 
     bool memTable::insert(const key_type &key, const value_type &value) {
@@ -48,7 +48,7 @@ namespace memtable {
         size_t total_size = data.size();
 
         // scan through all contents
-        for (int i = 0; i < total_size; ++i, ++it) {
+        for (; it != eit; ++it) {
             // assertion, not meet the end
             assert(it != eit);
 
@@ -58,7 +58,7 @@ namespace memtable {
             // if the pair is ok
             if (key <= key2 && key >= key1) {
                 // replace is not allowed
-                skip_list.put(key, it.value(), false);
+                skip_list.put(key, it.value());
             }
             // if those left keys are larger than key2
             else if (key > key2) {

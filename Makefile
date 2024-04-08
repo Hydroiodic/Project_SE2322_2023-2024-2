@@ -9,4 +9,4 @@ correctness: kvstore.o correctness.o
 persistence: kvstore.o persistence.o
 
 clean:
-	-rm -f correctness persistence *.o
+    -rm -f correctness persistence *.o

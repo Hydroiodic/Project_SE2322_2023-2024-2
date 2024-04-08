@@ -18,46 +18,47 @@ using levelmanager::levelManager;
 using def::key_type;
 using def::value_type;
 using def::ssTableContent;
+using def::ssTableData;
 using def::level_files;
 using def::managerFileDetail;
 
 class KVStore : public KVStoreAPI
 {
 private:
-	std::string directory;
+    std::string directory;
 
-	vLog v_log;
-	memTable mem_table;
-	levelManager level_manager;
+    vLog v_log;
+    memTable mem_table;
+    levelManager level_manager;
 
-	void writeMemTableIntoFile();
-	void flush();
+    void writeMemTableIntoFile();
+    void flush();
 
-	// get functions
-	std::optional<std::pair<uint64_t, u_int32_t>> getPairFromSSTable(const key_type& key);
-	std::optional<value_type> getFromMemTable(const key_type& key) const;
-	std::optional<value_type> getFromSSTable(const key_type& key);
+    // get functions
+    std::optional<std::pair<uint64_t, u_int32_t>> getPairFromSSTable(const key_type& key);
+    std::optional<value_type> getFromMemTable(const key_type& key) const;
+    std::optional<value_type> getFromSSTable(const key_type& key);
 
-	// scan functions
-	void scanFromMemTable(const key_type& key1, const key_type& key2, 
-		skiplist::skiplist_type& skip_list) const;
-	void scanFromSSTable(const key_type& key1, const key_type& key2, 
-		skiplist::skiplist_type& skip_list);
+    // scan functions
+    void scanFromMemTable(const key_type& key1, const key_type& key2, 
+        skiplist::skiplist_type& skip_list) const;
+    void scanFromSSTable(const key_type& key1, const key_type& key2, 
+        skiplist::skiplist_type& skip_list);
 
 public:
-	KVStore(const std::string &dir, const std::string &vlog);
+    KVStore(const std::string &dir, const std::string &vlog);
 
-	~KVStore();
+    ~KVStore();
 
-	void put(key_type key, const value_type& value) override;
+    void put(key_type key, const value_type& value) override;
 
-	value_type get(key_type key) override;
+    value_type get(key_type key) override;
 
-	bool del(key_type key) override;
+    bool del(key_type key) override;
 
-	void reset() override;
+    void reset() override;
 
-	void scan(key_type key1, key_type key2, std::list<std::pair<key_type, value_type>>& list) override;
+    void scan(key_type key1, key_type key2, std::list<std::pair<key_type, value_type>>& list) override;
 
-	void gc(uint64_t chunk_size) override;
+    void gc(uint64_t chunk_size) override;
 };

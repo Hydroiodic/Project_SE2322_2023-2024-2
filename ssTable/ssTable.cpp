@@ -53,7 +53,7 @@ namespace sstable {
     }
 
     void SSTable::initialize() {
-        /* maybe there's lots of things TODO? */
+        // load ssTableContent from file system
         load();
         timestamp = content->header.time;
     }
@@ -69,6 +69,11 @@ namespace sstable {
 
         // assign content
         this->content = content_to_write;
+
+        // TODO: actually I hope read could be separate from write
+        // filter initialized here
+        filter = new bloomFilter(def::bloom_filter_size);
+        filter->set(content->bloomFilterContent);
     }
 
     void SSTable::load() {
@@ -105,10 +110,10 @@ namespace sstable {
         }
 
         // find the key
-        def::sstableData* start = content->data, 
+        def::ssTableData* start = content->data, 
             * end = content->data + content->header.key_value_pair_number;
         auto it = std::lower_bound(start, end, key, 
-            [](const def::sstableData& dat, const key_type& key) -> bool 
+            [](const def::ssTableData& dat, const key_type& key) -> bool 
             { return dat.key < key; });
 
         // key found
@@ -120,13 +125,13 @@ namespace sstable {
         return std::nullopt;
     }
 
-    std::vector<std::pair<uint64_t, uint32_t>> SSTable::scan(
+    std::vector<ssTableData> SSTable::scan(
         const key_type& key1, const key_type& key2) {
         // content shouldn't be equal to nullptr
         assert(content);
 
         // variable holding offset-vlen pair
-        std::vector<std::pair<uint64_t, uint32_t>> vec;
+        std::vector<ssTableData> vec;
 
         // min_key and max_key check
         if (key2 < content->header.min_key || key1 > content->header.max_key) {
@@ -134,15 +139,15 @@ namespace sstable {
         }
 
         // find the first key larger or equal than key1
-        def::sstableData* start = content->data, 
+        def::ssTableData* start = content->data, 
             * end = content->data + content->header.key_value_pair_number;
         auto it = std::lower_bound(start, end, key1, 
-            [](const def::sstableData& dat, const key_type& key) -> bool 
+            [](const def::ssTableData& dat, const key_type& key) -> bool 
             { return dat.key < key; });
 
         // find all pairs with a smaller key than key2
         while (it != end && it->key <= key2) {
-            vec.push_back(std::make_pair(it->offset, it->value_length));
+            vec.push_back(*it);
             ++it;
         }
 
