@@ -1,1 +1,7 @@
 /build
+/*.o
+/**/*.o
+/correctness
+/persistence
+/data/*
+!/data/
