@@ -1,11 +1,8 @@
 #pragma once
 
-#include <optional>
-#include <string>
 #include "kvstore_api.h"
 #include "common/definitions.h"
 #include "memTable/memTable.h"
-#include "skipList/skipList.h"
 #include "ssTable/ssTable.h"
 #include "vLog/vLog.h"
 #include "levelManager/levelManager.h"
@@ -41,9 +38,9 @@ private:
 
     // scan functions
     void scanFromMemTable(const key_type& key1, const key_type& key2, 
-        skiplist::skiplist_type& skip_list) const;
+        std::map<key_type, value_type>& map) const;
     void scanFromSSTable(const key_type& key1, const key_type& key2, 
-        skiplist::skiplist_type& skip_list);
+        std::map<key_type, value_type>& map);
 
 public:
     KVStore(const std::string &dir, const std::string &vlog);

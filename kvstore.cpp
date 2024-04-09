@@ -1,8 +1,8 @@
 #include "kvstore.h"
 #include "common/definitions.h"
-#include "skipList/skipList.h"
-#include "utils.h"
 #include <algorithm>
+#include <iterator>
+#include <vector>
 
 KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(dir, vlog), 
     directory(dir), v_log(vlog), mem_table(dir), level_manager(dir) {
@@ -149,12 +149,12 @@ std::optional<value_type> KVStore::getFromSSTable(const key_type& key) {
 }
 
 void KVStore::scanFromMemTable(const key_type& key1, const key_type& key2, 
-    skiplist::skiplist_type& skip_list) const {
-    mem_table.scan(key1, key2, skip_list);
+    std::map<key_type, value_type>& map) const {
+    mem_table.scan(key1, key2, map);
 }
 
 void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2, 
-    skiplist::skiplist_type& skip_list) {
+    std::map<key_type, value_type>& map) {
     // iterate through all levels from zero to level_manager.size() - 1
     for (size_t level = 0; level < level_manager.size(); ++level) {
         // path to scan files
@@ -170,14 +170,44 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
         level_files files = level_manager.getLevelFiles(level);
         if (files.empty()) continue;
 
+        // this vector is used to store all ssTableData in current level
+        std::vector<ssTableData> vec;
+        level_files files_to_scan;
+
+        // iterate through all files in each level
+        if (level) [[likely]] {
+            // if the level number is larger than 0, all files is ordered and unique
+            // use binary_search to find the first file detail whose max_key is larger than key1
+            auto file_detail_less = [](const managerFileDetail& file, const key_type& key) -> bool {
+                return file.header.max_key < key;
+            };
+            auto it_begin = std::lower_bound(files.begin(), files.end(), 
+                key1, file_detail_less);
+            auto eit = files.end(), it_end = it_begin;
+
+            // if not found
+            if (it_begin == eit) continue;
+
+            // get all files needed to be scanned into a vector
+            while (it_end != eit && it_end->header.min_key <= key2) {
+                ++it_end;
+            }
+            files_to_scan = level_files(it_begin, it_end);
+        }
+        else {
+            files_to_scan = files;
+        }
+
         // iterate through all files in level 0
-        // TODO: when the number of level is larger than 0, we should use a quicker way to search
         for (managerFileDetail file : files) {
             // search for the key in SSTable
             SSTable* table;
+            bool from_cache = false;
+
             if (file.table_cache) {
                 // get in cache
                 table = file.table_cache;
+                from_cache = true;
             }
             else {
                 // get in file system
@@ -185,21 +215,27 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
             }
 
             // scan for results
-            std::vector<ssTableData> vec = table->scan(key1, key2);
+            std::vector<ssTableData> temp_vec = table->scan(key1, key2);
+            // here use move function to reduce cost
+            vec.insert(vec.end(), std::make_move_iterator(temp_vec.begin()), 
+                std::make_move_iterator(temp_vec.end()));
 
-            // scan for corresponding values
-            for (auto data : vec) {
+            // release memory if we get the table not from cache
+            if (!from_cache) delete table;
+        }
+
+        // insert ssTableData into the map
+        for (ssTableData data : vec) {
+            // check whether the key appeared in the map or not
+            if (map.find(data.key) == map.end()) {
                 // if the pair represents a deleted pair
                 if (!data.value_length) {
-                    skip_list.put(data.key, def::delete_tag);
+                    map[data.key] = def::delete_tag;
                 }
                 else {
-                    // check whether the key appeared in the skip_list or not
-                    if (!skip_list.get(data.key).has_value()) {
-                        // get value from vlog file and then put it into a skiplist
-                        auto result_pair = v_log.get(data.offset, data.value_length);
-                        skip_list.put(result_pair.first, result_pair.second);
-                    }
+                    // get value from vlog file and then put it into a skiplist
+                    auto result_pair = v_log.get(data.offset, data.value_length);
+                    map[result_pair.first] = result_pair.second;
                 }
             }
         }
@@ -275,21 +311,21 @@ void KVStore::scan(key_type key1, key_type key2, std::list<std::pair<key_type, v
     }
 
     // use skipList to store all values found
-    skiplist::skiplist_type skip_list;
+    std::map<key_type, value_type> map;
 
     // scan from memory
-    scanFromMemTable(key1, key2, skip_list);
+    scanFromMemTable(key1, key2, map);
 
     // scan from storage
-    scanFromSSTable(key1, key2, skip_list);
+    scanFromSSTable(key1, key2, map);
 
     // append all contents in the skiplist to the list
-    auto it = skip_list.cbegin(), eit = skip_list.cend();
+    auto it = map.cbegin(), eit = map.cend();
     while (it != eit) {
         // if the pair isn't a deleted one
-        if (it.value() != def::delete_tag) {
+        if (it->second != def::delete_tag) {
             // add to the list
-            list.push_back(std::make_pair(it.key(), it.value()));
+            list.push_back(*it);
         }
 
         // iterate for the next

@@ -1,6 +1,7 @@
 #include "memTable.h"
 #include <cassert>
 #include <cstring>
+#include <map>
 #include <optional>
 
 namespace memtable {
@@ -42,7 +43,7 @@ namespace memtable {
     }
 
     void memTable::scan(const key_type& key1, const key_type& key2, 
-        skiplist::skiplist_type& skip_list) const {
+        std::map<key_type, value_type>& map) const {
         // use iterator to scan
         skiplist::skiplist_type::const_iterator it = data.cbegin(), eit = data.cend();
         size_t total_size = data.size();
@@ -58,7 +59,7 @@ namespace memtable {
             // if the pair is ok
             if (key <= key2 && key >= key1) {
                 // replace is not allowed
-                skip_list.put(key, it.value());
+                map[key] = it.value();
             }
             // if those left keys are larger than key2
             else if (key > key2) {

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <optional>
 #include <utility>
+#include <map>
 
 namespace memtable {
 
@@ -35,7 +36,7 @@ namespace memtable {
         bool remove(const key_type& key);
         std::optional<value_type> get(const key_type& key) const;
         void scan(const key_type& key1, const key_type& key2, 
-            skiplist::skiplist_type& skip_list) const;
+            std::map<key_type, value_type>& map) const;
         void clear();
 
         ssTableContent* getContent(vlog::vLog& v_log) const;
