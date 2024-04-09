@@ -113,7 +113,7 @@ namespace levelmanager {
         std::filesystem::path path(directory_name);
 
         // remove each directory
-        for (int i = 0; i < level_number; ++i) {
+        for (size_t i = 0; i < level_number; ++i) {
             path.append(def::sstable_base_directory_name + std::to_string(i));
             utils::rmdir(path.string());
 

@@ -46,7 +46,6 @@ namespace memtable {
         std::map<key_type, value_type>& map) const {
         // use iterator to scan
         skiplist::skiplist_type::const_iterator it = data.cbegin(), eit = data.cend();
-        size_t total_size = data.size();
 
         // scan through all contents
         for (; it != eit; ++it) {
@@ -85,7 +84,7 @@ namespace memtable {
             old_it = it, eit = data.cend();
         content->header.min_key = it.key();
 
-        for (int i = 0; i < content->header.key_value_pair_number; ++i, old_it = it++) {
+        for (size_t i = 0; i < content->header.key_value_pair_number; ++i, old_it = it++) {
             // assertion, not meet the end
             assert(it != eit);
 

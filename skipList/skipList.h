@@ -43,7 +43,7 @@ namespace skiplist {
 		baseDataNode(const key_type& cur_key) : key(new key_type(cur_key)) {}
 		~baseDataNode() {
 			// delete all nodes
-			for (int i = 0; i < nodes.size(); ++i)
+			for (size_t i = 0; i < nodes.size(); ++i)
 				delete nodes[i];
 
 			// for head-node, key == nullptr

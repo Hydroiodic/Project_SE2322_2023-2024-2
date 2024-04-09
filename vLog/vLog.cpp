@@ -49,7 +49,7 @@ namespace vlog {
             file_stream.read((char*)check_buffer, bound);
 
             bool found = false;
-            for (int i = 0; i < bound; ++i, ++cur_pos) {
+            for (size_t i = 0; i < bound; ++i, ++cur_pos) {
                 if (check_buffer[i] == def::start_sign) {
                     // read from file into buffer
                     file_stream.seekg(cur_pos, std::ios::beg);

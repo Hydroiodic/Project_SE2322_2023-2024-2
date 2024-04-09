@@ -1,6 +1,7 @@
 #include "kvstore.h"
 #include "common/definitions.h"
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <vector>
 
@@ -8,7 +9,7 @@ KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(d
     directory(dir), v_log(vlog), mem_table(dir), level_manager(dir) {
     // get the max timestamp for memTable to use
     size_t cur_level_number = level_manager.size();
-    for (int i = 0; i < cur_level_number; ++i) {
+    for (size_t i = 0; i < cur_level_number; ++i) {
         // get details of all files in this level
         auto file_details = level_manager.getLevelFiles(i);
         // the level shouldn't be empty

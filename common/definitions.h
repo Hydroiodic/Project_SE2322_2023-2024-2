@@ -90,8 +90,8 @@ namespace def {
     using level_files = std::deque<managerFileDetail>;
 
     inline bool compare_file_detail_zero_level(const managerFileDetail& a, const managerFileDetail& b) {
-        return a.header.time > b.header.time || 
-            a.header.time == b.header.time && a.header.min_key < b.header.min_key;
+        return (a.header.time > b.header.time) || 
+            (a.header.time == b.header.time && a.header.min_key < b.header.min_key);
     }
 
     inline bool compare_file_detail_other_level(const managerFileDetail& a, const managerFileDetail& b) {
@@ -117,7 +117,8 @@ namespace def {
     // the structure used to build a less-rooted heap
     struct pq_greater {
         bool operator()(const pq_type& a, const pq_type& b) {
-            return a.first.key > b.first.key || a.first.key == b.first.key && a.second > b.second;
+            return (a.first.key > b.first.key) || 
+                (a.first.key == b.first.key && a.second > b.second);
         }
     };
 
