@@ -11,7 +11,7 @@
 namespace sstable {
 
     SSTable::SSTable(const std::string& dir_name, uint64_t ts, size_t layer, 
-        const std::string& name) : timestamp(ts), layer_number(layer) {
+        const std::string& name) : timestamp(ts) {
         // use a safer way to join directories
         std::filesystem::path directory(dir_name);
         directory.append(def::sstable_base_directory_name + std::to_string(layer));

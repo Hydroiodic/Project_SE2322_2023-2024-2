@@ -103,8 +103,8 @@ namespace levelmanager {
 
     void levelManager::clear() {
         // remove files from each level
-        for (level_files current_level : levels) {
-            for (managerFileDetail file_detail : current_level) {
+        for (const level_files& current_level : levels) {
+            for (const managerFileDetail& file_detail : current_level) {
                 utils::rmfile(file_detail.file_name);
             }
         }
@@ -226,7 +226,7 @@ namespace levelmanager {
         }
 
         // release memory
-        for (auto table : contents) {
+        for (SSTable* table : contents) {
             delete table;
         }
 
@@ -263,7 +263,7 @@ namespace levelmanager {
 
         // iterate through these files and merge them with files in the following level
         std::vector<managerFileDetail> files;
-        for (auto file_detail : files_to_be_merged) {
+        for (const managerFileDetail& file_detail : files_to_be_merged) {
             // files in current level
             files.push_back(file_detail);
 

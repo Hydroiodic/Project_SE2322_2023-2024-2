@@ -24,7 +24,6 @@ namespace sstable {
         std::fstream file_stream;
 
         uint64_t timestamp = 0;
-        size_t layer_number = 0;
 
         // read once upon a time
         ssTableContent* content = nullptr;

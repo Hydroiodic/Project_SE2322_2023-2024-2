@@ -16,7 +16,7 @@ KVStore::KVStore(const std::string &dir, const std::string &vlog) : KVStoreAPI(d
         if (!file_details.empty()) {
             // scan for max timestamp
             uint64_t max_timestamp = 0;
-            for (managerFileDetail detail : file_details) {
+            for (const managerFileDetail& detail : file_details) {
                 max_timestamp = std::max(max_timestamp, detail.header.time);
             }
 
@@ -69,7 +69,6 @@ std::optional<std::pair<uint64_t, u_int32_t>> KVStore::getPairFromSSTable(const 
     // iterate through all levels from zero to level_manager.size() - 1
     for (size_t level = 0; level < level_manager.size(); ++level) {
         // start scaning
-        if (level >= level_manager.size()) return std::nullopt;
         level_files files = level_manager.getLevelFiles(level);
         if (files.empty()) continue;
 
@@ -104,7 +103,7 @@ std::optional<std::pair<uint64_t, u_int32_t>> KVStore::getPairFromSSTable(const 
             }
         }
         else {
-            for (managerFileDetail file : files) {
+            for (const managerFileDetail& file : files) {
                 // search for the key in SSTable
                 std::optional<std::pair<uint64_t, uint32_t>> result;
                 if (file.table_cache) {
@@ -200,7 +199,7 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
         }
 
         // iterate through all files in level 0
-        for (managerFileDetail file : files) {
+        for (const managerFileDetail& file : files) {
             // search for the key in SSTable
             SSTable* table;
             bool from_cache = false;
@@ -226,7 +225,7 @@ void KVStore::scanFromSSTable(const key_type& key1, const key_type& key2,
         }
 
         // insert ssTableData into the map
-        for (ssTableData data : vec) {
+        for (const ssTableData& data : vec) {
             // check whether the key appeared in the map or not
             if (map.find(data.key) == map.end()) {
                 // if the pair represents a deleted pair
@@ -342,7 +341,7 @@ void KVStore::gc(uint64_t chunk_size) {
     // check collected vLog entries here
     std::vector<garbage_unit> garbage_to_validate = v_log.getGCReinsertion(chunk_size);
 
-    for (auto garbage : garbage_to_validate) {
+    for (const garbage_unit& garbage : garbage_to_validate) {
         def::vLogEntry entry = garbage.first;
 
         // not in mem_table
