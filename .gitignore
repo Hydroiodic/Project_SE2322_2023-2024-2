@@ -3,5 +3,10 @@
 /**/*.o
 /correctness
 /persistence
+/basic
+/cache
+/compaction
+/filter
 /data/*
 !/data/
+/.vscode

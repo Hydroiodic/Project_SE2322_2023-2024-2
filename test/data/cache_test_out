@@ -1,0 +1,14 @@
+/****************** Initializing *******************/
+Average time: 19496.2ns
+/******************* Testing Get *******************/
+Average time: 789367ns
+
+/****************** Initializing *******************/
+Average time: 20801.6ns
+/******************* Testing Get *******************/
+Average time: 18124.3ns
+
+/****************** Initializing *******************/
+Average time: 17495.2ns
+/******************* Testing Get *******************/
+Average time: 21266.3ns

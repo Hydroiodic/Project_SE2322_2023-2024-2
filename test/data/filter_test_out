@@ -1,0 +1,71 @@
+Current size of BloomFilter: 1024bytes
+/******************* Testing Put *******************/
+Average time: 16920.2ns
+/******************* Testing Get *******************/
+Average time: 8918.93ns
+
+Current size of BloomFilter: 2048bytes
+/******************* Testing Put *******************/
+Average time: 17005.9ns
+/******************* Testing Get *******************/
+Average time: 8963.29ns
+
+Current size of BloomFilter: 3072bytes
+/******************* Testing Put *******************/
+Average time: 17615.1ns
+/******************* Testing Get *******************/
+Average time: 8998.31ns
+
+Current size of BloomFilter: 4096bytes
+/******************* Testing Put *******************/
+Average time: 16775.8ns
+/******************* Testing Get *******************/
+Average time: 11412.7ns
+
+Current size of BloomFilter: 5120bytes
+/******************* Testing Put *******************/
+Average time: 17269.6ns
+/******************* Testing Get *******************/
+Average time: 12033.5ns
+
+Current size of BloomFilter: 6144bytes
+/******************* Testing Put *******************/
+Average time: 17693.7ns
+/******************* Testing Get *******************/
+Average time: 13004.3ns
+
+Current size of BloomFilter: 7168bytes
+/******************* Testing Put *******************/
+Average time: 18162.4ns
+/******************* Testing Get *******************/
+Average time: 16049.9ns
+
+Current size of BloomFilter: 8192bytes
+/******************* Testing Put *******************/
+Average time: 18672.1ns
+/******************* Testing Get *******************/
+Average time: 17055.5ns
+
+Current size of BloomFilter: 9216bytes
+/******************* Testing Put *******************/
+Average time: 19862ns
+/******************* Testing Get *******************/
+Average time: 18621.5ns
+
+Current size of BloomFilter: 10240bytes
+/******************* Testing Put *******************/
+Average time: 20230.9ns
+/******************* Testing Get *******************/
+Average time: 19454.9ns
+
+Current size of BloomFilter: 11264bytes
+/******************* Testing Put *******************/
+Average time: 19865.7ns
+/******************* Testing Get *******************/
+Average time: 24831.6ns
+
+Current size of BloomFilter: 12288bytes
+/******************* Testing Put *******************/
+Average time: 21146.9ns
+/******************* Testing Get *******************/
+Average time: 31265.4ns
