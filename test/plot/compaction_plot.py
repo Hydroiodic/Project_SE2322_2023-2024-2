@@ -17,6 +17,6 @@ x, y = zip(*numbers)
 # Plot the data
 plt.plot(x, y)
 plt.xlabel("Operation No")
-plt.ylabel("Nanoseconds of Put")
-plt.title("Time Cost Trend of Put")
+plt.ylabel("Throughput of Put Per Second")
+plt.title("Throughput Trend of Put")
 plt.show()
